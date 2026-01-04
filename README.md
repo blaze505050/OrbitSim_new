@@ -1,7 +1,7 @@
 # OrbitSim_new
 AAC NITK 3D Orbit Simulator
 A high precision, interactive N-body gravity simulation of the Solar System built for the club project. This simulator visualizes real orbital mechanics using a custom physics engine to demonstrate gravitational perturbation and conservation laws.
-[🔴 LIVE DEMO LINK HERE]
+https://blaze505050.github.io/OrbitSim_new/ 
 This project simulates the motion of celestial bodies using the Velocity Verlet integration method. Unlike standard Euler integration, this symplectic integrator preserves the system's energy over long durations, allowing for stable orbits that don't spiral out of control.
 The simulation runs in a full 3D environment, allowing users to inspect orbital inclinations, visualize velocity changes at perihelion/aphelion, and monitor system stability via real-time analytics.
 Features
