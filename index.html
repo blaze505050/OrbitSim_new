@@ -3,951 +3,565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AAC NITK - 3D Orbit Simulator</title>
+    <title>AAC NITK - Scientific Orrery</title>
+    <!-- Three.js Core -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Official OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
     <style>
         :root {
-            --bg-color: #000000;
-            --panel-bg: rgba(15, 23, 42, 0.95);
-            --accent: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.3);
-            --text: #f1f5f9;
-            --border: rgba(255, 255, 255, 0.15);
+            --bg: #0b0c10;
+            --panel: rgba(31, 40, 51, 0.9);
+            --accent: #66fcf1;
+            --text: #c5c6c7;
+            --border: 1px solid rgba(102, 252, 241, 0.2);
+            --font-ui: 'Segoe UI', system-ui, sans-serif;
+            --font-mono: 'Consolas', monospace;
         }
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: var(--bg-color);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            color: var(--text);
-        }
-
-        #container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        #simCanvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 0;
-        }
-
-        /* --- Main UI Layer --- */
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: var(--font-ui); color: var(--text); }
+        #container { width: 100vw; height: 100vh; }
+        
+        /* UI Layout */
         #ui-layer {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 320px;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 10;
+            position: absolute; top: 20px; left: 20px; width: 320px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 10; pointer-events: none;
         }
-
+        
         .panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            pointer-events: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            background: var(--panel); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 4px; border: var(--border);
+            pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
         h1 {
-            font-size: 1.1rem;
-            margin: 0 0 12px 0;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: 800;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-size: 14px; margin: 0 0 10px 0; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 2px; border-bottom: var(--border); padding-bottom: 5px;
         }
 
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            margin-bottom: 6px;
-            color: #94a3b8;
+        .data-row {
+            display: flex; justify-content: space-between;
+            font-size: 11px; margin-bottom: 5px; font-family: var(--font-mono); color: #888;
         }
-        .stat-value { font-family: 'Courier New', monospace; font-weight: 600; color: #e2e8f0; }
-
-        /* Camera Targets */
-        .target-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-        }
-        .target-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            color: #cbd5e1;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex-grow: 1;
-            text-align: center;
-        }
-        .target-btn:hover { background: rgba(56, 189, 248, 0.2); border-color: var(--accent); color: white; }
-        .target-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: bold; box-shadow: 0 0 10px var(--accent-glow); }
+        .data-val { color: #fff; font-weight: 700; }
 
         /* Controls */
-        button.action-btn {
-            background: var(--accent);
-            color: #0f172a;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 700;
-            width: 100%;
-            margin-top: 8px;
-            transition: transform 0.1s, filter 0.2s;
-        }
-        button.action-btn:hover { filter: brightness(1.1); }
-        button.action-btn:active { transform: scale(0.98); }
+        input[type=range] { width: 100%; cursor: pointer; margin: 10px 0; }
         
-        button.secondary-btn {
-            background: transparent;
-            border: 1px solid var(--accent);
-            color: var(--accent);
+        button {
+            width: 100%; background: transparent; border: var(--border);
+            color: var(--accent); padding: 8px; font-weight: 700; font-size: 10px;
+            cursor: pointer; text-transform: uppercase; margin-top: 5px;
+            transition: all 0.2s;
         }
-        button.secondary-btn:hover { background: var(--accent-glow); }
+        button:hover { background: var(--accent); color: #000; }
+        button.active { background: var(--accent); color: #000; }
 
-        .slider-container { margin: 12px 0; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
-
-        /* --- Analytics Dashboard (Overlay) --- */
-        #analytics-dashboard {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 400px;
-            background: var(--panel-bg);
-            backdrop-filter: blur(15px);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 16px;
-            display: none; /* Hidden by default */
-            z-index: 20;
-            box-shadow: -10px 10px 40px rgba(0,0,0,0.6);
-            max-height: 90vh;
-            overflow-y: auto;
+        /* Target Grid */
+        .target-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
+        .t-btn {
+            padding: 5px; font-size: 9px; text-align: center; border: 1px solid #444;
+            cursor: pointer; color: #888; transition: 0.2s;
         }
+        .t-btn:hover { border-color: var(--accent); color: #fff; }
+        .t-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        /* Analytics */
+        #analytics {
+            position: absolute; top: 20px; right: 20px; width: 350px;
+            background: var(--panel); border: var(--border); padding: 15px;
+            display: none; pointer-events: auto; z-index: 20;
+        }
+        #analytics.visible { display: block; }
         
-        #analytics-dashboard.visible {
-            display: block;
-            animation: fadeIn 0.3s ease-out;
-        }
+        .plot-box { margin-bottom: 15px; }
+        .plot-header { font-size: 10px; color: #aaa; margin-bottom: 3px; display: flex; justify-content:space-between; }
+        .cvs-wrap { width: 100%; height: 60px; background: rgba(0,0,0,0.3); border: 1px solid #333; }
+        canvas { width: 100%; height: 100%; }
 
-        .plot-group { margin-bottom: 20px; }
-        .plot-header { font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;}
-        
-        .live-val {
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            color: var(--text);
-            background: rgba(0,0,0,0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .plot-container {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            padding: 8px;
-            border: 1px solid var(--border);
-            height: 80px; /* Force container height */
-            width: 100%;
-            box-sizing: border-box;
-        }
-        canvas.plot { 
-            width: 100%; 
-            height: 100%; 
-            display: block; 
-        }
-        
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: transparent;
-            border: none;
-            color: #94a3b8;
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-        .close-btn:hover { color: white; }
-
-        /* 3D Tooltip */
+        /* Tooltip */
         #tooltip {
-            position: absolute;
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid var(--accent);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            pointer-events: none;
-            opacity: 0;
-            transform: translate(-50%, -100%);
-            margin-top: -20px;
-            transition: opacity 0.2s;
-            white-space: pre-line;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            position: absolute; background: rgba(0,0,0,0.9); border: 1px solid #555;
+            color: #fff; padding: 8px; font-size: 10px; font-family: var(--font-mono);
+            pointer-events: none; opacity: 0; transform: translate(-50%, -120%);
+            z-index: 100;
         }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
     </style>
 </head>
 <body>
 
-<div id="container">
-    <div id="ui-layer">
-        <!-- Main Control Panel -->
-        <div class="panel">
-            <h1>Orbit Simulator <span style="font-size:0.6em; color:#64748b;">v4.1</span></h1>
-            
-            <div class="stat-row"><span>Time Elapsed:</span> <span id="simTime" class="stat-value">0.00 y</span></div>
-            <div class="stat-row"><span>Status:</span> <span id="status" class="stat-value" style="color:#4ade80">Running</span></div>
-            
-            <div class="slider-container">
-                <div class="stat-row"><span>Sim Speed</span> <span id="speedVal" class="stat-value">40</span></div>
-                <input type="range" id="speedSlider" min="0" max="100" value="40" oninput="document.getElementById('speedVal').innerText=this.value">
-            </div>
-            
-            <button id="btnPause" class="action-btn">Pause Simulation</button>
-            <button id="btnAnalytics" class="action-btn secondary-btn" style="margin-top: 10px;">📊 Open Analytics Dashboard</button>
+<div id="container"></div>
 
-            <div style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
-                <span style="font-size: 0.75rem; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px;">Camera Target</span>
-                <div class="target-list" id="cameraTargets">
-                    <div class="target-btn active" data-target="Sun">Sun</div>
-                    <!-- Planets added by JS -->
-                </div>
-            </div>
-        </div>
+<div id="ui-layer">
+    <div class="panel">
+        <h1>TRACKER</h1>
+        <div class="data-row"><span>DATE</span> <span id="simDate" class="data-val">JAN 01 2000</span></div>
+        <div class="data-row"><span>SPEED</span> <span id="timeScale" class="data-val">1.0 DAYS/TICK</span></div>
         
-        <!-- Quick Guide -->
-        <div class="panel" style="font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
-            <strong style="color:var(--accent)">Controls:</strong><br>
-            • Left Click + Drag to Rotate<br>
-            • Right Click + Drag to Pan<br>
-            • Scroll to Zoom
-        </div>
-    </div>
-
-    <!-- Analytics Dashboard Overlay -->
-    <div id="analytics-dashboard">
-        <button class="close-btn" id="closeAnalytics">&times;</button>
-        <h1>Mission Analytics</h1>
+        <input type="range" id="speedSlider" min="0" max="50" step="0.1" value="1">
         
-        <div class="plot-group">
-            <div class="plot-header">
-                <span>Total Energy (System)</span>
-                <span id="valEnergy" class="live-val" style="color:#ef4444;">--</span>
-            </div>
-            <div class="plot-container">
-                <canvas id="energyPlot" class="plot"></canvas>
-            </div>
-        </div>
+        <button id="btnPause">PAUSE TIME</button>
+        <button id="btnView">VIEW: ORBIT</button>
+        <button id="btnData" style="margin-top:10px; border-style:dashed;">SHOW TELEMETRY</button>
 
-        <div class="plot-group">
-            <div class="plot-header">
-                <span>Angular Momentum</span>
-                <span id="valMomentum" class="live-val" style="color:#4ade80;">--</span>
-            </div>
-            <div class="plot-container">
-                <canvas id="momentumPlot" class="plot"></canvas>
-            </div>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
-
-        <div class="plot-group">
-            <div class="plot-header">
-                <span id="targetNameDist">Target Distance (r)</span>
-                <span id="valDist" class="live-val" style="color:#38bdf8;">--</span>
-            </div>
-            <div class="plot-container">
-                <canvas id="distPlot" class="plot"></canvas>
-            </div>
-        </div>
-
-        <div class="plot-group">
-            <div class="plot-header">
-                <span id="targetNameVel">Orbital Velocity (v)</span>
-                <span id="valVel" class="live-val" style="color:#f472b6;">--</span>
-            </div>
-            <div class="plot-container">
-                <canvas id="velPlot" class="plot"></canvas>
-            </div>
+        <div style="margin-top:15px; border-top:var(--border); padding-top:10px;">
+            <span style="font-size:10px; color:#666;">PRIMARY TARGET</span>
+            <div class="target-grid" id="targetGrid"></div>
         </div>
     </div>
     
-    <div id="tooltip"></div>
+    <div class="panel" style="font-size:10px; color:#888;">
+        <strong>NAV SYSTEMS (OrbitControls)</strong><br>
+        L-Click: Rotate • R-Click: Pan • Scroll: Zoom
+    </div>
 </div>
 
+<div id="analytics">
+    <button onclick="document.getElementById('analytics').classList.remove('visible')" style="float:right; width:auto; padding:2px 6px; margin:0;">X</button>
+    <h1>ORBITAL TELEMETRY</h1>
+    
+    <div class="plot-box">
+        <div class="plot-header"><span>Target Distance (AU)</span> <span id="valDist" style="color:var(--accent)">--</span></div>
+        <div class="cvs-wrap"><canvas id="plotDist"></canvas></div>
+    </div>
+    <div class="plot-box">
+        <div class="plot-header"><span>Orbital Velocity (km/s)</span> <span id="valVel" style="color:#e040fb">--</span></div>
+        <div class="cvs-wrap"><canvas id="plotVel"></canvas></div>
+    </div>
+</div>
+
+<div id="tooltip"></div>
+
 <script>
-(function() { // IIFE START
+(function() { 
 
-/**
- * ------------------------------------------------------------------
- * 1. PHYSICS ENGINE
- * ------------------------------------------------------------------
- */
+// =================================================================
+// 1. SCIENTIFIC CORE: KEPLERIAN ELEMENTS (J2000)
+// =================================================================
+// These are not random numbers. These are the scientific orbital elements 
+// relative to the J2000 epoch (Jan 1, 2000, 12:00 UTC).
+// a: semi-major (AU), e: eccentricity, i: inclination (deg)
+// L: mean longitude (deg), w: long. of perihelion (deg), O: long. of ascending node (deg)
+// rate values are per century (Cy) or similar, simplified here for real-time calc.
 
-const G = 39.4784176; 
-const SOFTENING = 0.05;
+const J2000 = 2451545.0; // Julian Date for J2000
+const CY = 36525; // Days in a century
 
-class Vector3 {
-    constructor(x, y, z = 0) { this.x = x; this.y = y; this.z = z; }
-    add(v) { return new Vector3(this.x + v.x, this.y + v.y, this.z + v.z); }
-    sub(v) { return new Vector3(this.x - v.x, this.y - v.y, this.z - v.z); }
-    scale(s) { return new Vector3(this.x * s, this.y * s, this.z * s); }
-    mag() { return Math.sqrt(this.x**2 + this.y**2 + this.z**2); }
-    magSq() { return this.x**2 + this.y**2 + this.z**2; }
-    cross(v) {
-        return new Vector3(
-            this.y * v.z - this.z * v.y,
-            this.z * v.x - this.x * v.z,
-            this.x * v.y - this.y * v.x
-        );
-    }
-}
+const PLANET_DATA = {
+    Mercury: { a: 0.387098, e: 0.20563, i: 7.00, L: 252.25, w: 77.46, O: 48.33, n: 4.0923344368 },
+    Venus:   { a: 0.723332, e: 0.00677, i: 3.39, L: 181.98, w: 131.53, O: 76.68, n: 1.6021302244 },
+    Earth:   { a: 1.000000, e: 0.01671, i: 0.00, L: 100.46, w: 102.94, O: 0.00,  n: 0.9856082535 },
+    Mars:    { a: 1.523679, e: 0.09340, i: 1.85, L: 355.45, w: 336.04, O: 49.58, n: 0.5240207766 },
+    Jupiter: { a: 5.204267, e: 0.04849, i: 1.30, L: 34.40,  w: 14.75,  O: 100.56, n: 0.0830853001 },
+    Saturn:  { a: 9.582017, e: 0.05555, i: 2.49, L: 49.94,  w: 92.43,  O: 113.72, n: 0.0334442282 },
+    Uranus:  { a: 19.22941, e: 0.04717, i: 0.77, L: 313.23, w: 170.96, O: 74.23,  n: 0.011725806 },
+    Neptune: { a: 30.06114, e: 0.00859, i: 1.77, L: 304.88, w: 44.97,  O: 131.72, n: 0.005995147 }
+};
 
-class Body {
-    constructor(name, mass, pos, vel, color, radius, emissive = false) {
-        this.name = name;
-        this.mass = mass;
-        this.pos = pos;
-        this.vel = vel;
-        this.acc = new Vector3(0,0,0);
-        this.color = color;
-        this.radius = radius; 
-        this.emissive = emissive;
-        this.trailPoints = [];
-        this.maxTrail = 600; 
-    }
+// Colors & Scales
+const VISUALS = {
+    Sun:     { r: 4.0, c: 0xffaa00, emit: true },
+    Mercury: { r: 0.5, c: 0xaaaaaa },
+    Venus:   { r: 0.9, c: 0xffd700 },
+    Earth:   { r: 1.0, c: 0x2255ff, atmo: true },
+    Mars:    { r: 0.7, c: 0xff4400 },
+    Jupiter: { r: 2.4, c: 0xd4a373 },
+    Saturn:  { r: 2.1, c: 0xe3d081, ring: true },
+    Uranus:  { r: 1.6, c: 0x40e0d0 },
+    Neptune: { r: 1.6, c: 0x3333ff }
+};
 
-    pushTrail() {
-        this.trailPoints.push(this.pos.x, this.pos.y, this.pos.z);
-        if (this.trailPoints.length > this.maxTrail * 3) {
-            this.trailPoints.splice(0, 3);
-        }
-    }
-}
-
-class PhysicsSystem {
+class EphemerisSystem {
     constructor() {
-        this.bodies = [];
-        this.dt = 0.01;
+        this.julianDate = J2000;
+        this.bodies = {};
     }
 
-    step() {
-        for (let b of this.bodies) {
-            b.vel = b.vel.add(b.acc.scale(0.5 * this.dt));
-            b.pos = b.pos.add(b.vel.scale(this.dt));
-        }
+    update(daysToAdd) {
+        this.julianDate += daysToAdd;
+        const d = this.julianDate - J2000; // Days since J2000
 
-        this.calculateAccelerations();
+        for (const [name, data] of Object.entries(PLANET_DATA)) {
+            // 1. Calculate Mean Anomaly (M)
+            // n is degrees per day
+            let M = (data.L - data.w + data.n * d) % 360;
+            if (M < 0) M += 360;
+            const M_rad = M * Math.PI / 180;
 
-        for (let b of this.bodies) {
-            b.vel = b.vel.add(b.acc.scale(0.5 * this.dt));
-        }
-    }
-
-    calculateAccelerations() {
-        for (let b of this.bodies) b.acc = new Vector3(0,0,0);
-
-        for (let i = 0; i < this.bodies.length; i++) {
-            for (let j = i + 1; j < this.bodies.length; j++) {
-                const b1 = this.bodies[i];
-                const b2 = this.bodies[j];
-                
-                const rVec = b2.pos.sub(b1.pos);
-                const rSq = rVec.magSq();
-                const dist = Math.sqrt(rSq + SOFTENING**2);
-                
-                const f = (G * b1.mass * b2.mass) / (dist**3);
-                const fVec = rVec.scale(f);
-
-                b1.acc = b1.acc.add(fVec.scale(1/b1.mass));
-                b2.acc = b2.acc.sub(fVec.scale(1/b2.mass));
+            // 2. Solve Kepler's Equation for Eccentric Anomaly (E)
+            // M = E - e*sin(E). Iterative solution.
+            let E = M_rad;
+            let delta = 1.0;
+            let iters = 0;
+            while (Math.abs(delta) > 1e-6 && iters < 10) {
+                delta = E - data.e * Math.sin(E) - M_rad;
+                E = E - delta / (1 - data.e * Math.cos(E));
+                iters++;
             }
+
+            // 3. True Anomaly (v) and Radius (r)
+            // Calculate coordinates in orbital plane
+            const xv = data.a * (Math.cos(E) - data.e);
+            const yv = data.a * Math.sqrt(1 - data.e*data.e) * Math.sin(E);
+            
+            const v = Math.atan2(yv, xv); // True anomaly in rads
+            const r = Math.sqrt(xv*xv + yv*yv); // Distance in AU
+
+            // 4. Heliocentric Coordinates (3D Space)
+            // Rotate by Longitude of Ascending Node (O), Argument of Perihelion (w), Inclination (i)
+            const O_rad = data.O * Math.PI / 180;
+            const w_rad = data.w * Math.PI / 180;
+            const i_rad = data.i * Math.PI / 180;
+
+            // Compute position
+            const x = r * (Math.cos(O_rad) * Math.cos(v + w_rad - O_rad) - Math.sin(O_rad) * Math.sin(v + w_rad - O_rad) * Math.cos(i_rad));
+            const y = r * (Math.sin(O_rad) * Math.cos(v + w_rad - O_rad) + Math.cos(O_rad) * Math.sin(v + w_rad - O_rad) * Math.cos(i_rad));
+            const z = r * (Math.sin(v + w_rad - O_rad) * Math.sin(i_rad));
+
+            // Velocity (Vis-viva estimate for analytics)
+            // v = sqrt(GM(2/r - 1/a)) - In normalized units GM ~ 39.478 (using 4pi^2)
+            const GM = 39.478; 
+            const velMag = Math.sqrt(GM * (2/r - 1/data.a));
+
+            // Store result (Swap Y/Z for Three.js: Physics Z is Up, Three Y is Up)
+            this.bodies[name] = { 
+                pos: new THREE.Vector3(x, z, y), // Mapping to X, Z, Y
+                r: r,
+                v: velMag
+            };
         }
     }
-
-    getEnergy() {
-        let kin = 0, pot = 0;
-        for (let i=0; i<this.bodies.length; i++) {
-            kin += 0.5 * this.bodies[i].mass * this.bodies[i].vel.magSq();
-            for (let j=i+1; j<this.bodies.length; j++) {
-                const r = this.bodies[i].pos.sub(this.bodies[j].pos).mag();
-                pot -= (G * this.bodies[i].mass * this.bodies[j].mass) / r;
-            }
-        }
-        return kin + pot;
-    }
-
-    getMomentum() {
-        let L = new Vector3(0,0,0);
-        for(let b of this.bodies) {
-            L = L.add(b.pos.cross(b.vel.scale(b.mass)));
-        }
-        return L.mag();
+    
+    getDateString() {
+        // Convert JD to readable date
+        // Simplified calculation for display
+        const date = new Date("2000-01-01T12:00:00Z");
+        const diffDays = this.julianDate - J2000;
+        date.setDate(date.getDate() + diffDays);
+        return date.toDateString().toUpperCase();
     }
 }
 
-/**
- * ------------------------------------------------------------------
- * 2. THREE.JS RENDERING ENGINE
- * ------------------------------------------------------------------
- */
-
+// =================================================================
+// 2. THREE.JS VISUALIZATION
+// =================================================================
 let scene, camera, renderer, controls, sunLight;
-let planetMeshes = new Map();
-let trailLines = new Map();
-let sys = new PhysicsSystem();
+let meshes = {};
+let trails = {};
+let eph = new EphemerisSystem();
 let isPaused = false;
-let frameCount = 0;
-let totalTime = 0;
-let raycaster, mouse;
-let targetBodyName = "Sun"; 
-let showAnalytics = false;
+let timeScale = 1.0;
+let targetName = "Sun";
+let viewMode = "ORBIT"; // ORBIT or OBSERVE
 
-function init3D() {
+function init() {
+    // Scene
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.0015);
+    scene.fog = new THREE.FogExp2(0x0b0c10, 0.002);
 
-    camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 8000);
+    // Camera
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 10000);
     camera.position.set(0, 40, 60);
 
+    // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.domElement.id = 'simCanvas';
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    document.getElementById('container').appendChild(renderer.domElement);
 
-    const container = document.getElementById('container');
-    const oldCanvas = container.querySelector('canvas#simCanvas');
-    if (oldCanvas) container.removeChild(oldCanvas);
-    container.insertBefore(renderer.domElement, container.firstChild);
+    // CONTROLS (Standard Lib)
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 500;
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x222222);
-    scene.add(ambientLight);
-
-    sunLight = new THREE.PointLight(0xffffff, 2.0, 500);
-    sunLight.position.set(0, 0, 0);
+    // Lighting
+    const ambient = new THREE.AmbientLight(0x222222);
+    scene.add(ambient);
+    
+    sunLight = new THREE.PointLight(0xffddaa, 2.0, 1000);
     scene.add(sunLight);
 
+    // Objects
     createStarfield();
-    setupInput();
-    initSolarSystem();
+    createSolarSystem();
+    createUI();
+
+    // Loop
+    animate();
+}
+
+function createSolarSystem() {
+    // Sun
+    const sunGeo = new THREE.SphereGeometry(VISUALS.Sun.r, 32, 32);
+    const sunMat = new THREE.MeshBasicMaterial({ color: VISUALS.Sun.c });
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    scene.add(sunMesh);
+    meshes['Sun'] = sunMesh;
+    
+    // Sun Glow
+    const glowMat = new THREE.SpriteMaterial({ 
+        map: new THREE.CanvasTexture(generateGlowTexture()), 
+        color: 0xffaa00, 
+        blending: THREE.AdditiveBlending 
+    });
+    const glow = new THREE.Sprite(glowMat);
+    glow.scale.set(15, 15, 1);
+    sunMesh.add(glow);
+
+    // Planets
+    for(const name in PLANET_DATA) {
+        const conf = VISUALS[name];
+        
+        // Mesh
+        const geo = new THREE.SphereGeometry(1, 32, 32); // Base size 1, scale later
+        const mat = new THREE.MeshStandardMaterial({ 
+            color: conf.c, 
+            roughness: 0.7, 
+            metalness: 0.1 
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        const s = conf.r * 0.5;
+        mesh.scale.set(s, s, s);
+        
+        // Atmosphere (Earth)
+        if(conf.atmo) {
+            const atmo = new THREE.Mesh(
+                new THREE.SphereGeometry(1.2, 32, 32),
+                new THREE.MeshBasicMaterial({ color: 0x44aaff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending })
+            );
+            mesh.add(atmo);
+        }
+
+        // Ring (Saturn)
+        if(conf.ring) {
+            const ringGeo = new THREE.RingGeometry(1.4, 2.2, 64);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xcbb677, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI/2;
+            mesh.add(ring);
+        }
+
+        scene.add(mesh);
+        meshes[name] = mesh;
+
+        // Trail (LineLoop for orbits)
+        // Pre-calculate orbit for display
+        const trailGeo = new THREE.BufferGeometry();
+        const pts = [];
+        // Calculate one full orbit for trace
+        const periodApprox = Math.pow(PLANET_DATA[name].a, 1.5) * 365;
+        const tempEph = new EphemerisSystem();
+        tempEph.julianDate = J2000;
+        
+        for(let i=0; i<=100; i++) {
+            tempEph.update(periodApprox/100);
+            pts.push(tempEph.bodies[name].pos.x, tempEph.bodies[name].pos.y, tempEph.bodies[name].pos.z);
+        }
+        trailGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: conf.c, transparent:true, opacity:0.3 }));
+        scene.add(trail);
+    }
+}
+
+function generateGlowTexture() {
+    const cvs = document.createElement('canvas'); cvs.width = 64; cvs.height = 64;
+    const ctx = cvs.getContext('2d');
+    const g = ctx.createRadialGradient(32,32,0, 32,32,32);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.4, 'rgba(255,200,100,0.5)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
+    return cvs;
 }
 
 function createStarfield() {
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    const colors = [];
-    const color = new THREE.Color();
-    
-    for (let i = 0; i < 5000; i++) {
-        const x = (Math.random() - 0.5) * 2000;
-        const y = (Math.random() - 0.5) * 2000;
-        const z = (Math.random() - 0.5) * 2000;
-        vertices.push(x, y, z);
-        
-        const starType = Math.random();
-        if(starType > 0.9) color.setHex(0xffaaaa); 
-        else if(starType > 0.7) color.setHex(0xffffaa); 
-        else color.setHex(0xaaaaff); 
-        
-        colors.push(color.r, color.g, color.b);
+    const geo = new THREE.BufferGeometry();
+    const pos = []; const col = []; const c = new THREE.Color();
+    for(let i=0; i<3000; i++) {
+        const x = (Math.random()-0.5)*2000;
+        const y = (Math.random()-0.5)*2000;
+        const z = (Math.random()-0.5)*2000;
+        pos.push(x,y,z);
+        c.setHSL(Math.random(), 0.5, 0.8);
+        col.push(c.r, c.g, c.b);
     }
-    
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    
-    const material = new THREE.PointsMaterial({ 
-        size: 1.2, 
-        vertexColors: true,
-        transparent: true, 
-        opacity: 0.8 
-    });
-    
-    const stars = new THREE.Points(geometry, material);
-    scene.add(stars);
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const mat = new THREE.PointsMaterial({ size:1.2, vertexColors:true, transparent:true, opacity:0.8 });
+    scene.add(new THREE.Points(geo, mat));
 }
 
-function initSolarSystem() {
-    sys.bodies = [];
-    
-    const targetList = document.getElementById('cameraTargets');
-    if(targetList) {
-        while(targetList.children.length > 0) { targetList.removeChild(targetList.lastChild); }
-        
-        const sunBtn = document.createElement('div');
-        sunBtn.className = 'target-btn active';
-        sunBtn.innerText = "Sun";
-        sunBtn.dataset.target = "Sun";
-        sunBtn.onclick = () => {
-            targetBodyName = "Sun";
-            document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('active'));
-            sunBtn.classList.add('active');
+// =================================================================
+// 3. UI & ANALYTICS
+// =================================================================
+function createUI() {
+    // Generate Target Buttons
+    const grid = document.getElementById('targetGrid');
+    ['Sun', ...Object.keys(PLANET_DATA)].forEach(name => {
+        const btn = document.createElement('div');
+        btn.className = `t-btn ${name==='Sun'?'active':''}`;
+        btn.innerText = name.toUpperCase();
+        btn.onclick = () => {
+            targetName = name;
+            document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         };
-        targetList.appendChild(sunBtn);
-    }
-    
-    function addPlanet(name, mass, a, e, color, size, inclination = 0) {
-        const r_p = a * (1 - e);
-        const v_p = Math.sqrt( (G * 1.0 / a) * ((1 + e) / (1 - e)) );
-        
-        const rad = inclination * Math.PI / 180;
-        const pos = new Vector3(r_p, 0, 0);
-        const vel = new Vector3(0, v_p * Math.sin(rad), v_p * Math.cos(rad));
-        
-        const angle = Math.random() * Math.PI * 2;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        
-        const pRot = new Vector3(pos.x * cos - pos.z * sin, 0, pos.x * sin + pos.z * cos);
-        const vRot = new Vector3(vel.x * cos - vel.z * sin, vel.y, vel.x * sin + vel.z * cos);
-
-        sys.bodies.push(new Body(name, mass, pRot, vRot, color, size));
-        
-        if(targetList) {
-            const btn = document.createElement('div');
-            btn.className = 'target-btn';
-            btn.innerText = name;
-            btn.dataset.target = name;
-            btn.onclick = () => {
-                targetBodyName = name;
-                document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            };
-            targetList.appendChild(btn);
-        }
-    }
-
-    sys.bodies.push(new Body("Sun", 1.0, new Vector3(0,0,0), new Vector3(0,0,0), 0xffdb4d, 3.5, true));
-
-    addPlanet("Mercury", 1.66e-7, 0.387, 0.205, 0xa1a1a1, 0.5);
-    addPlanet("Venus", 2.45e-6, 0.723, 0.007, 0xffd085, 0.95);
-    addPlanet("Earth", 3.00e-6, 1.000, 0.017, 0x2f6a69, 1.0);
-    addPlanet("Mars", 3.23e-7, 1.524, 0.094, 0xe27b58, 0.7);
-    addPlanet("Jupiter", 9.54e-4, 5.203, 0.048, 0xc99039, 2.2);
-    addPlanet("Saturn", 2.86e-4, 9.537, 0.054, 0xe3d081, 1.9);
-    addPlanet("Uranus", 4.36e-5, 19.191, 0.047, 0xa4f2f5, 1.4);
-    addPlanet("Neptune", 5.15e-5, 30.068, 0.008, 0x5b5ddf, 1.4);
-
-    {
-        const a = 39.48;
-        const e = 0.248;
-        const r_p = a * (1 - e);
-        const v_p = Math.sqrt( (G * 1.0 / a) * ((1 + e) / (1 - e)) );
-        const inc = 17 * (Math.PI/180);
-        const pos = new Vector3(r_p, 0, 0);
-        const vel = new Vector3(0, v_p * Math.sin(inc), v_p * Math.cos(inc));
-        sys.bodies.push(new Body("Pluto", 1e-8, pos, vel, 0xdddddd, 0.4));
-    }
-
-    planetMeshes.forEach(m => scene.remove(m));
-    trailLines.forEach(l => scene.remove(l));
-    planetMeshes.clear();
-    trailLines.clear();
-
-    sys.bodies.forEach(b => {
-        const geo = new THREE.SphereGeometry(1, 48, 48);
-        const mat = b.emissive 
-            ? new THREE.MeshBasicMaterial({ color: b.color }) 
-            : new THREE.MeshPhongMaterial({ color: b.color, shininess: 10 });
-        
-        const mesh = new THREE.Mesh(geo, mat);
-        const s = b.radius * 0.5;
-        mesh.scale.set(s, s, s);
-        scene.add(mesh);
-        planetMeshes.set(b, mesh);
-        
-        if (b.emissive && sunLight) {
-            sunLight.color.setHex(b.color);
-        }
-
-        const trailGeo = new THREE.BufferGeometry();
-        const positions = new Float32Array(b.maxTrail * 3);
-        trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const trailMat = new THREE.LineBasicMaterial({ color: b.color, transparent: true, opacity: 0.35 });
-        const trail = new THREE.Line(trailGeo, trailMat);
-        trail.frustumCulled = false;
-        scene.add(trail);
-        trailLines.set(b, trail);
+        grid.appendChild(btn);
     });
-}
 
-/**
- * ------------------------------------------------------------------
- * 3. CONTROLS WITH CAMERA FOLLOW
- * ------------------------------------------------------------------
- */
-class OrbitControls {
-    constructor(camera, domElement) {
-        this.camera = camera;
-        this.domElement = domElement;
-        this.radius = 40;
-        this.theta = Math.PI / 3;
-        this.phi = Math.PI / 2;
-        this.target = new THREE.Vector3(0,0,0);
-        
-        this.isDragging = false;
-        this.prevMouse = { x:0, y:0 };
-        this.mode = null;
-        
-        this.updateCamera();
-    }
-    
-    update(dt) {
-        let desiredTarget = new THREE.Vector3(0,0,0);
-        let found = false;
-        
-        const body = sys.bodies.find(b => b.name === targetBodyName);
-        if (body) {
-            desiredTarget.set(body.pos.x, body.pos.z, body.pos.y);
-            found = true;
-        }
-
-        if (found) {
-            this.target.lerp(desiredTarget, 0.1); 
-        }
-        
-        this.updateCamera();
-    }
-    
-    onMouseDown(e) {
-        this.isDragging = true;
-        this.prevMouse = { x: e.clientX, y: e.clientY };
-        this.mode = e.button === 2 ? 'PAN' : 'ROTATE';
-    }
-    
-    onMouseMove(e) {
-        if (!this.isDragging) return;
-        const dx = e.clientX - this.prevMouse.x;
-        const dy = e.clientY - this.prevMouse.y;
-        
-        if (this.mode === 'ROTATE') {
-            this.phi -= dx * 0.005;
-            this.theta -= dy * 0.005;
-            this.theta = Math.max(0.1, Math.min(Math.PI - 0.1, this.theta));
-        } else if (this.mode === 'PAN') {
-             if (targetBodyName === "Sun") {
-                const panSpeed = this.radius * 0.002;
-                this.target.x -= dx * panSpeed;
-                this.target.z -= dy * panSpeed;
-             }
-        }
-        this.prevMouse = { x: e.clientX, y: e.clientY };
-    }
-    
-    onMouseUp() { this.isDragging = false; }
-    onWheel(e) {
-        const zoom = 1 + e.deltaY * 0.001;
-        this.radius *= zoom;
-        this.radius = Math.max(5, Math.min(800, this.radius));
-    }
-    
-    updateCamera() {
-        const x = this.radius * Math.sin(this.theta) * Math.cos(this.phi);
-        const y = this.radius * Math.cos(this.theta);
-        const z = this.radius * Math.sin(this.theta) * Math.sin(this.phi);
-        
-        this.camera.position.set(x + this.target.x, y + this.target.y, z + this.target.z);
-        this.camera.lookAt(this.target);
-    }
-}
-
-function setupInput() {
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
-
-    controls = new OrbitControls(camera, renderer.domElement);
-    
-    const canvas = renderer.domElement;
-    if (canvas) {
-        canvas.addEventListener('mousedown', e => controls.onMouseDown(e));
-        canvas.addEventListener('wheel', e => controls.onWheel(e));
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
-    }
-    
-    window.addEventListener('mousemove', e => {
-        if (controls) controls.onMouseMove(e);
-        if (mouse && raycaster) handleTooltip(e);
+    // Event Listeners
+    document.getElementById('speedSlider').addEventListener('input', (e) => {
+        timeScale = parseFloat(e.target.value);
+        document.getElementById('timeScale').innerText = timeScale.toFixed(1) + " DAYS/TICK";
     });
-    window.addEventListener('mouseup', () => controls.onMouseUp());
-    
+
+    document.getElementById('btnPause').addEventListener('click', function() {
+        isPaused = !isPaused;
+        this.innerText = isPaused ? "RESUME TIME" : "PAUSE TIME";
+        this.classList.toggle('active');
+    });
+
+    document.getElementById('btnView').addEventListener('click', function() {
+        viewMode = viewMode === 'ORBIT' ? 'OBSERVE' : 'ORBIT';
+        this.innerText = viewMode === 'ORBIT' ? 'VIEW: ORBIT' : 'VIEW: OBSERVATORY';
+        this.classList.toggle('active');
+    });
+
+    document.getElementById('btnData').addEventListener('click', function() {
+        const el = document.getElementById('analytics');
+        el.classList.toggle('visible');
+        this.classList.toggle('active');
+    });
+
+    // Resize
     window.addEventListener('resize', () => {
-        if (!camera || !renderer) return;
-        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.aspect = window.innerWidth/window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        
-        // Also resize plots if visible
-        if (showAnalytics) resizePlots();
     });
-    
-    const btnPause = document.getElementById('btnPause');
-    if (btnPause) {
-        btnPause.addEventListener('click', () => {
-            isPaused = !isPaused;
-            btnPause.innerText = isPaused ? "Resume Simulation" : "Pause Simulation";
-            btnPause.style.background = isPaused ? "#ef4444" : "#38bdf8";
-            document.getElementById('status').innerText = isPaused ? "Paused" : "Running";
-            document.getElementById('status').style.color = isPaused ? "#ef4444" : "#4ade80";
-        });
-    }
 
-    // Analytics Logic
-    const btnAnalytics = document.getElementById('btnAnalytics');
-    const dashboard = document.getElementById('analytics-dashboard');
-    const closeAnalytics = document.getElementById('closeAnalytics');
-
-    if (btnAnalytics && dashboard) {
-        btnAnalytics.addEventListener('click', () => {
-            showAnalytics = true;
-            dashboard.classList.add('visible');
-            // CRITICAL FIX: Resize plots immediately when they become visible
-            requestAnimationFrame(resizePlots);
-        });
+    // Raycaster for Tooltips
+    const ray = new THREE.Raycaster();
+    const ptr = new THREE.Vector2();
+    window.addEventListener('mousemove', (e) => {
+        ptr.x = (e.clientX/window.innerWidth)*2 - 1;
+        ptr.y = -(e.clientY/window.innerHeight)*2 + 1;
+        ray.setFromCamera(ptr, camera);
         
-        closeAnalytics.addEventListener('click', () => {
-            showAnalytics = false;
-            dashboard.classList.remove('visible');
-        });
-    }
-}
-
-function resizePlots() {
-    // Helper to resize all plot canvases to their containers
-    [energyPlot, momPlot, distPlot, velPlot].forEach(plot => {
-        if (plot.cvs) {
-            const container = plot.cvs.parentElement;
-            plot.cvs.width = container.clientWidth;
-            plot.cvs.height = container.clientHeight;
+        const hits = ray.intersectObjects(Object.values(meshes));
+        const tip = document.getElementById('tooltip');
+        if(hits.length > 0) {
+            let obj = hits[0].object;
+            // Traverse up if we hit a child (like ring/atmo)
+            while(obj.parent && obj.parent.type === 'Mesh') obj = obj.parent;
+            // Find name
+            const name = Object.keys(meshes).find(key => meshes[key] === obj);
+            if(name) {
+                tip.style.opacity = 1;
+                tip.style.left = e.clientX + 'px';
+                tip.style.top = e.clientY + 'px';
+                tip.innerText = name.toUpperCase();
+            }
+        } else {
+            tip.style.opacity = 0;
         }
     });
 }
 
-function handleTooltip(e) {
-    if (!mouse || !raycaster || !camera) return;
-    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-    
-    const meshes = Array.from(planetMeshes.values());
-    const intersects = raycaster.intersectObjects(meshes);
-    
-    const tip = document.getElementById('tooltip');
-    if (intersects.length > 0) {
-        const mesh = intersects[0].object;
-        let body = null;
-        for (let [b, m] of planetMeshes.entries()) { if (m === mesh) { body = b; break; } }
-        
-        if (body) {
-            tip.style.opacity = 1;
-            tip.style.left = e.clientX + 'px';
-            tip.style.top = e.clientY + 'px';
-            const v = body.vel.mag() * 4.74; 
-            tip.innerHTML = `<strong style="color:${body.color === 0xffdb4d ? '#ffdb4d' : '#fff'}">${body.name}</strong><br>` +
-                            `Dist: ${body.pos.mag().toFixed(2)} AU<br>Vel: ${v.toFixed(1)} km/s`;
-        }
-    } else {
-        if (tip) tip.style.opacity = 0;
-    }
-}
-
-/**
- * ------------------------------------------------------------------
- * 4. PLOTTING & MAIN LOOP
- * ------------------------------------------------------------------
- */
-
-const energyPlot = initPlot('energyPlot', '#ef4444');
-const momPlot = initPlot('momentumPlot', '#4ade80');
-const distPlot = initPlot('distPlot', '#38bdf8');
-const velPlot = initPlot('velPlot', '#f472b6');
+// Plotting
+const pDist = initPlot('plotDist', '#66fcf1');
+const pVel = initPlot('plotVel', '#e040fb');
 
 function initPlot(id, color) {
     const cvs = document.getElementById(id);
-    if (!cvs) return { data: [], color, max: 200 };
-    const ctx = cvs.getContext('2d');
-    // Initial size might be 0 if hidden, but resizePlots will fix
-    return { cvs, ctx, data: [], color, max: 150 };
+    cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
+    return { ctx: cvs.getContext('2d'), data: [], color: color, w:cvs.width, h:cvs.height };
 }
 
-function updatePlot(plot, val, valueElId, unit) {
-    if (!plot.ctx) return;
-    plot.data.push(val);
-    if(plot.data.length > plot.max) plot.data.shift();
+function drawPlot(p, val) {
+    p.data.push(val);
+    if(p.data.length > 100) p.data.shift();
     
-    // Update live value text
-    if (valueElId) {
-        const el = document.getElementById(valueElId);
-        if (el) el.innerText = val.toPrecision(5) + (unit ? " " + unit : "");
-    }
-
-    if (!showAnalytics) return; // Optimization
-
-    const c = plot.ctx;
-    const w = plot.cvs.width;
-    const h = plot.cvs.height;
+    const ctx = p.ctx;
+    ctx.clearRect(0,0,p.w,p.h);
     
-    // Safety check for 0-size canvas
-    if (w === 0 || h === 0) return;
-
-    c.clearRect(0,0,w,h);
-    
-    // Gradient fill
-    const grad = c.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, plot.color);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    
-    // Draw Grid
-    c.strokeStyle = 'rgba(255,255,255,0.05)';
-    c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(0, h/2); c.lineTo(w, h/2);
-    c.stroke();
-
-    // Auto-scale
-    let min = Math.min(...plot.data);
-    let max = Math.max(...plot.data);
+    // Scale
+    let min = Math.min(...p.data);
+    let max = Math.max(...p.data);
     let range = max - min;
-    
-    // Ensure small movements are visible (zoom in on the variation)
-    if (range < 0.00001) range = 0.00001; 
-    
-    // Add padding to top/bottom
-    const padding = range * 0.1;
-    min -= padding;
-    max += padding;
-    range = max - min;
+    if(range === 0) range = 1;
 
-    c.beginPath();
-    c.strokeStyle = plot.color;
-    c.lineWidth = 2.5;
-    
-    // Draw Line
-    for(let i=0; i<plot.data.length; i++) {
-        const x = (i / (plot.max-1)) * w;
-        // Normalize value to 0-1 based on current min/max window
-        const normalized = (plot.data[i] - min) / range;
-        const y = h - (normalized * h);
-        
-        if(i===0) c.moveTo(x,y); else c.lineTo(x,y);
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let i=0; i<p.data.length; i++) {
+        const x = (i/99) * p.w;
+        const n = (p.data[i] - min) / range;
+        const y = p.h - (n * (p.h*0.8) + p.h*0.1); // 10% padding
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
-    c.stroke();
-
-    // Fill under line
-    c.lineTo(w, h);
-    c.lineTo(0, h);
-    c.closePath();
-    c.fillStyle = grad;
-    c.globalAlpha = 0.2;
-    c.fill();
-    c.globalAlpha = 1.0;
+    ctx.stroke();
 }
 
+// =================================================================
+// 4. MAIN LOOP
+// =================================================================
 function animate() {
     requestAnimationFrame(animate);
 
-    const speedInput = document.getElementById('speedSlider');
-    const speed = speedInput ? parseInt(speedInput.value) : 0;
-    
-    if (!isPaused && speed > 0) {
-        const steps = 8;
-        const yrPerSec = speed * 0.005;
-        sys.dt = yrPerSec / steps;
-        
-        for(let i=0; i<steps; i++) sys.step();
-        
-        totalTime += yrPerSec;
-        const timeDisplay = document.getElementById('simTime');
-        if (timeDisplay) timeDisplay.innerText = totalTime.toFixed(2) + " yrs";
-        
-        if (frameCount % 3 === 0) {
-            for(let b of sys.bodies) b.pushTrail();
-        }
-    }
-    
-    // Sync Visuals
-    controls.update(); 
-    
-    for(let [b, mesh] of planetMeshes.entries()) {
-        mesh.position.set(b.pos.x, b.pos.z, b.pos.y);
-        
-        const line = trailLines.get(b);
-        const positions = line.geometry.attributes.position.array;
-        
-        let idx = 0;
-        for(let i=0; i<b.trailPoints.length; i+=3) {
-            positions[idx++] = b.trailPoints[i];     
-            positions[idx++] = b.trailPoints[i+2];   
-            positions[idx++] = b.trailPoints[i+1];   
-        }
-        line.geometry.setDrawRange(0, b.trailPoints.length / 3);
-        line.geometry.attributes.position.needsUpdate = true;
-    }
-    
-    // Update Plots
-    if (frameCount % 5 === 0) {
-        // Global Stats
-        updatePlot(energyPlot, sys.getEnergy(), 'valEnergy', 'J');
-        updatePlot(momPlot, sys.getMomentum(), 'valMomentum', 'L');
-
-        // Target Specific Stats
-        const targetBody = sys.bodies.find(b => b.name === targetBodyName);
-        if (targetBody) {
-            // Distance (AU)
-            updatePlot(distPlot, targetBody.pos.mag(), 'valDist', 'AU');
-            // Velocity (km/s)
-            updatePlot(velPlot, targetBody.vel.mag() * 4.74, 'valVel', 'km/s');
-            
-            // Update labels
-            const nameElDist = document.getElementById('targetNameDist');
-            const nameElVel = document.getElementById('targetNameVel');
-            if(nameElDist) nameElDist.innerText = `${targetBodyName} Distance`;
-            if(nameElVel) nameElVel.innerText = `${targetBodyName} Velocity`;
-        }
+    if (!isPaused) {
+        eph.update(timeScale); // Update Physics by Date
+        document.getElementById('simDate').innerText = eph.getDateString();
     }
 
-    if (renderer) renderer.render(scene, camera);
-    frameCount++;
+    // Sync Meshes
+    for (const [name, mesh] of Object.entries(meshes)) {
+        if(name === 'Sun') continue;
+        const data = eph.bodies[name];
+        mesh.position.copy(data.pos);
+    }
+
+    // Camera Logic
+    const targetMesh = meshes[targetName];
+    if (targetMesh) {
+        const tPos = targetMesh.position;
+        
+        // Update Controls Target
+        controls.target.lerp(tPos, 0.1);
+
+        if (viewMode === 'OBSERVE' && targetName !== 'Sun') {
+            // "North Pole" Observatory View
+            // Need radius of planet. Simplification: scale is radius*0.5 in init.
+            // But we didn't store raw radius. Let's approx based on planet list index or visuals.
+            // Better: just offset Y by small amount relative to scale.
+            const offset = targetMesh.scale.y * 1.5; 
+            const obsPos = tPos.clone().add(new THREE.Vector3(0, offset, 0));
+            camera.position.lerp(obsPos, 0.1);
+            camera.lookAt(0,0,0); // Look at Sun
+        }
+    }
+    
+    controls.update(); // Standard OrbitControls update
+
+    // Update Analytics
+    if (targetName !== 'Sun' && eph.bodies[targetName]) {
+        const d = eph.bodies[targetName];
+        drawPlot(pDist, d.r);
+        drawPlot(pVel, d.v * 4.74); // Convert AU/yr to km/s approx
+        document.getElementById('valDist').innerText = d.r.toFixed(3);
+        document.getElementById('valVel').innerText = (d.v * 4.74).toFixed(1);
+    }
+
+    renderer.render(scene, camera);
 }
 
-// Start
-init3D();
-animate();
+// Boot
+init();
 
-})(); // IIFE END
+})(); 
 </script>
 </body>
 </html>
