@@ -397,6 +397,20 @@ function createSystem() {
         const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: d.color, transparent:true, opacity:name==='Halley'?0.5:0.2 }));
         scene.add(line);
         orbits.push(line);
+        
+        // Add Moon Visual Orbit if applicable
+        if (d.moons) {
+            const moonOrbit = new THREE.Line(
+                new THREE.RingGeometry(
+                    (MOON_SCALE * DIST_SCALE * MOON_DATA.a * 0.95) / (d.r * 0.5), 
+                    (MOON_SCALE * DIST_SCALE * MOON_DATA.a * 1.05) / (d.r * 0.5), 
+                    64
+                ),
+                new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.3 })
+            );
+            moonOrbit.rotation.x = Math.PI / 2;
+            mesh.add(moonOrbit);
+        }
     }
 
     // Moon
@@ -420,7 +434,7 @@ function makeGlow() {
 function createUI() {
     // Generate Target Buttons
     const grid = document.getElementById('targetGrid');
-    ['Sun', ...Object.keys(PLANET_DATA)].forEach(n => {
+    ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Ceres', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'Halley'].forEach(n => {
         const b = document.createElement('div');
         b.className = `t-btn ${n==='Sun'?'active':''}`; b.innerText = n.toUpperCase();
         b.onclick = () => setTarget(n, b);
@@ -528,6 +542,20 @@ function setTarget(name, btnEl) {
     const content = document.getElementById('infoContent');
     const title = document.getElementById('infoTitle');
     
+    // Moon Stats Override
+    if (name === 'Moon') {
+        title.innerText = "MOON DATA";
+        content.innerHTML = `
+            <div class="info-row"><span class="info-label">MASS (kg)</span> <span class="info-data">7.34e22</span></div>
+            <div class="info-row"><span class="info-label">RADIUS (km)</span> <span class="info-data">1,737</span></div>
+            <div class="info-row"><span class="info-label">TEMP (°C)</span> <span class="info-data">-53</span></div>
+            <div class="info-row"><span class="info-label">GRAVITY (m/s²)</span> <span class="info-data">1.62</span></div>
+            <div class="info-row"><span class="info-label">ORBIT (days)</span> <span class="info-data">27.3</span></div>
+        `;
+        panel.classList.add('visible');
+        return;
+    }
+
     if(name === 'Sun' || !PLANET_DATA[name]) {
         panel.classList.remove('visible');
     } else {
