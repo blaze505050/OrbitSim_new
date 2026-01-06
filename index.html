@@ -3,90 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AAC NITK - Scientific Orrery</title>
-    <!-- Three.js Core -->
+    <title>AAC NITK - Interplanetary Mission Center</title>
+    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Official OrbitControls -->
+    <!-- OrbitControls -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
     <style>
         :root {
-            --bg: #0b0c10;
-            --panel: rgba(31, 40, 51, 0.9);
-            --accent: #66fcf1;
-            --text: #c5c6c7;
-            --border: 1px solid rgba(102, 252, 241, 0.2);
+            --bg: #050505;
+            --panel: rgba(18, 20, 24, 0.95);
+            --accent: #00e5ff;
+            --text: #e0e0e0;
+            --muted: #607d8b;
+            --border: 1px solid rgba(255, 255, 255, 0.12);
             --font-ui: 'Segoe UI', system-ui, sans-serif;
             --font-mono: 'Consolas', monospace;
         }
 
-        body { margin: 0; overflow: hidden; background: var(--bg); font-family: var(--font-ui); color: var(--text); }
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: var(--font-ui); color: var(--text); user-select: none; }
         #container { width: 100vw; height: 100vh; }
         
-        /* UI Layout */
-        #ui-layer {
-            position: absolute; top: 20px; left: 20px; width: 320px;
-            display: flex; flex-direction: column; gap: 10px; z-index: 10; pointer-events: none;
-        }
+        /* Layout */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
+        /* Panels */
         .panel {
-            background: var(--panel); backdrop-filter: blur(10px);
-            padding: 15px; border-radius: 4px; border: var(--border);
-            pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            background: var(--panel); backdrop-filter: blur(12px);
+            padding: 16px; border-radius: 2px; border: var(--border);
+            pointer-events: auto; box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Top Left - Main Controls */
+        #main-controls {
+            position: absolute; top: 20px; left: 20px; width: 300px;
+            display: flex; flex-direction: column; gap: 10px;
         }
 
         h1 {
-            font-size: 14px; margin: 0 0 10px 0; color: var(--accent);
-            text-transform: uppercase; letter-spacing: 2px; border-bottom: var(--border); padding-bottom: 5px;
+            font-size: 12px; margin: 0 0 10px 0; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 2px; border-bottom: var(--border); padding-bottom: 8px;
+            font-weight: 800;
         }
 
         .data-row {
-            display: flex; justify-content: space-between;
-            font-size: 11px; margin-bottom: 5px; font-family: var(--font-mono); color: #888;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; margin-bottom: 5px; font-family: var(--font-mono); color: var(--muted);
         }
         .data-val { color: #fff; font-weight: 700; }
 
-        /* Controls */
-        input[type=range] { width: 100%; cursor: pointer; margin: 10px 0; }
+        /* Inputs */
+        input[type=range] { width: 100%; cursor: pointer; margin: 5px 0; height: 3px; background: #333; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; }
         
-        button {
-            width: 100%; background: transparent; border: var(--border);
-            color: var(--accent); padding: 8px; font-weight: 700; font-size: 10px;
-            cursor: pointer; text-transform: uppercase; margin-top: 5px;
-            transition: all 0.2s;
+        input[type=date] {
+            background: rgba(0,0,0,0.3); border: 1px solid #444; color: #fff;
+            font-family: var(--font-mono); font-size: 11px; padding: 4px;
+            text-transform: uppercase; cursor: pointer;
         }
-        button:hover { background: var(--accent); color: #000; }
-        button.active { background: var(--accent); color: #000; }
+        input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+        button {
+            flex: 1; background: transparent; border: var(--border);
+            color: var(--text); padding: 8px; font-weight: 700; font-size: 10px;
+            cursor: pointer; text-transform: uppercase; transition: all 0.2s;
+        }
+        button:hover { background: rgba(255,255,255,0.05); border-color: var(--accent); }
+        button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .btn-group { display: flex; gap: 5px; }
+
+        /* Zoom Controls (Bottom Left) */
+        .zoom-controls {
+            position: absolute; bottom: 30px; left: 30px;
+            display: flex; flex-direction: column; gap: 5px; pointer-events: auto;
+        }
+        .zoom-btn {
+            width: 40px; height: 40px; border-radius: 2px; background: var(--panel);
+            border: var(--border); color: var(--accent); font-size: 18px; display: grid; place-items: center;
+            cursor: pointer; transition: 0.2s;
+        }
+        .zoom-btn:hover { background: var(--accent); color: #000; }
 
         /* Target Grid */
-        .target-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
+        .target-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 5px; }
         .t-btn {
-            padding: 5px; font-size: 9px; text-align: center; border: 1px solid #444;
-            cursor: pointer; color: #888; transition: 0.2s;
+            padding: 4px; font-size: 9px; text-align: center; border: 1px solid #333;
+            cursor: pointer; color: #888; transition: 0.2s; background: rgba(0,0,0,0.2);
         }
         .t-btn:hover { border-color: var(--accent); color: #fff; }
-        .t-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .t-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 800; }
 
-        /* Analytics */
-        #analytics {
-            position: absolute; top: 20px; right: 20px; width: 350px;
-            background: var(--panel); border: var(--border); padding: 15px;
-            display: none; pointer-events: auto; z-index: 20;
+        /* Info Panel (Right Side) */
+        #info-panel {
+            position: absolute; top: 20px; right: 20px; width: 260px;
+            display: none;
         }
-        #analytics.visible { display: block; }
-        
-        .plot-box { margin-bottom: 15px; }
-        .plot-header { font-size: 10px; color: #aaa; margin-bottom: 3px; display: flex; justify-content:space-between; }
-        .cvs-wrap { width: 100%; height: 60px; background: rgba(0,0,0,0.3); border: 1px solid #333; }
-        canvas { width: 100%; height: 100%; }
+        #info-panel.visible { display: block; animation: slideIn 0.3s ease; }
+        .info-row {
+            display: flex; justify-content: space-between; padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11px;
+        }
+        .info-label { color: var(--muted); }
+        .info-data { color: var(--accent); font-family: var(--font-mono); }
+
+        /* Mission Planner (Bottom Right) */
+        #mission-planner {
+            position: absolute; bottom: 20px; right: 20px; width: 260px;
+        }
+        select {
+            width: 100%; background: #111; color: #fff; border: 1px solid #444;
+            padding: 5px; font-size: 11px; margin-bottom: 5px;
+        }
+        .result-box {
+            background: rgba(0,229,255,0.1); border: 1px solid var(--accent);
+            padding: 8px; margin-top: 8px; font-size: 10px; font-family: var(--font-mono);
+            display: none;
+        }
 
         /* Tooltip */
         #tooltip {
             position: absolute; background: rgba(0,0,0,0.9); border: 1px solid #555;
-            color: #fff; padding: 8px; font-size: 10px; font-family: var(--font-mono);
-            pointer-events: none; opacity: 0; transform: translate(-50%, -120%);
-            z-index: 100;
+            color: #fff; padding: 6px 10px; font-size: 10px; font-family: var(--font-mono);
+            pointer-events: none; opacity: 0; transform: translate(-50%, -120%); z-index: 100;
         }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 </head>
 <body>
@@ -94,41 +135,54 @@
 <div id="container"></div>
 
 <div id="ui-layer">
-    <div class="panel">
-        <h1>TRACKER</h1>
-        <div class="data-row"><span>DATE</span> <span id="simDate" class="data-val">JAN 01 2000</span></div>
-        <div class="data-row"><span>SPEED</span> <span id="timeScale" class="data-val">1.0 DAYS/TICK</span></div>
+    <!-- Main Controls -->
+    <div id="main-controls" class="panel">
+        <h1>SYSTEM TRACKER</h1>
         
-        <input type="range" id="speedSlider" min="0" max="50" step="0.1" value="1">
+        <div class="data-row">
+            <span>CURRENT DATE</span>
+            <input type="date" id="datePicker">
+        </div>
         
-        <button id="btnPause">PAUSE TIME</button>
-        <button id="btnView">VIEW: ORBIT</button>
-        <button id="btnData" style="margin-top:10px; border-style:dashed;">SHOW TELEMETRY</button>
+        <div class="data-row"><span>SIM SPEED</span> <span id="timeScale">1.0 DAY/SEC</span></div>
+        <input type="range" id="speedSlider" min="0" max="10" step="0.1" value="1">
+        
+        <div class="btn-group">
+            <button id="btnPause">PAUSE</button>
+            <button id="btnView">VIEW: ORBIT</button>
+        </div>
 
-        <div style="margin-top:15px; border-top:var(--border); padding-top:10px;">
-            <span style="font-size:10px; color:#666;">PRIMARY TARGET</span>
+        <div style="margin-top:10px; border-top:var(--border); padding-top:8px;">
+            <span style="font-size:10px; color:#666; letter-spacing:1px;">FOCUS TARGET</span>
             <div class="target-grid" id="targetGrid"></div>
         </div>
     </div>
-    
-    <div class="panel" style="font-size:10px; color:#888;">
-        <strong>NAV SYSTEMS (OrbitControls)</strong><br>
-        L-Click: Rotate • R-Click: Pan • Scroll: Zoom
+
+    <!-- Planet Info Panel -->
+    <div id="info-panel" class="panel">
+        <h1 id="infoTitle">EARTH DATA</h1>
+        <div id="infoContent">
+            <!-- Injected by JS -->
+        </div>
+    </div>
+
+    <!-- Mission Planner -->
+    <div id="mission-planner" class="panel">
+        <h1>HOHMANN TRANSFER</h1>
+        <div style="display:flex; gap:5px;">
+            <select id="startPlanet"></select>
+            <span style="font-size:18px; color:#666;">&rarr;</span>
+            <select id="endPlanet"></select>
+        </div>
+        <button id="btnCalcMission" style="width:100%; border-color:var(--accent);">CALCULATE & VISUALIZE</button>
+        <div id="missionResults" class="result-box"></div>
     </div>
 </div>
 
-<div id="analytics">
-    <button onclick="document.getElementById('analytics').classList.remove('visible')" style="float:right; width:auto; padding:2px 6px; margin:0;">X</button>
-    <h1>ORBITAL TELEMETRY</h1>
-    
-    <div class="plot-box">
-        <div class="plot-header"><span>Target Distance (AU)</span> <span id="valDist" style="color:var(--accent)">--</span></div>
-        <div class="cvs-wrap"><canvas id="plotDist"></canvas></div>
-    </div>
-    <div class="plot-box">
-        <div class="plot-header"><span>Orbital Velocity (km/s)</span> <span id="valVel" style="color:#e040fb">--</span></div>
-        <div class="cvs-wrap"><canvas id="plotVel"></canvas></div>
-    </div>
+<!-- Manual Zoom Controls -->
+<div class="zoom-controls">
+    <div class="zoom-btn" id="btnZoomIn">+</div>
+    <div class="zoom-btn" id="btnZoomOut">−</div>
 </div>
 
 <div id="tooltip"></div>
@@ -137,44 +191,28 @@
 (function() { 
 
 // =================================================================
-// 1. SCIENTIFIC CORE: KEPLERIAN ELEMENTS (J2000)
+// 1. DATA CORE
 // =================================================================
-// These are not random numbers. These are the scientific orbital elements 
-// relative to the J2000 epoch (Jan 1, 2000, 12:00 UTC).
-// a: semi-major (AU), e: eccentricity, i: inclination (deg)
-// L: mean longitude (deg), w: long. of perihelion (deg), O: long. of ascending node (deg)
-// rate values are per century (Cy) or similar, simplified here for real-time calc.
-
-const J2000 = 2451545.0; // Julian Date for J2000
-const CY = 36525; // Days in a century
-
-// SCALING FACTOR: 1 AU = 40 Scene Units. 
-// This creates visual space between the 4.0 unit Sun and the planets.
+const J2000 = 2451545.0; 
 const DIST_SCALE = 40.0; 
+const MOON_SCALE = 150.0; 
 
+// Orbital Elements (J2000) + Physical Data
 const PLANET_DATA = {
-    Mercury: { a: 0.387098, e: 0.20563, i: 7.00, L: 252.25, w: 77.46, O: 48.33, n: 4.0923344368 },
-    Venus:   { a: 0.723332, e: 0.00677, i: 3.39, L: 181.98, w: 131.53, O: 76.68, n: 1.6021302244 },
-    Earth:   { a: 1.000000, e: 0.01671, i: 0.00, L: 100.46, w: 102.94, O: 0.00,  n: 0.9856082535 },
-    Mars:    { a: 1.523679, e: 0.09340, i: 1.85, L: 355.45, w: 336.04, O: 49.58, n: 0.5240207766 },
-    Jupiter: { a: 5.204267, e: 0.04849, i: 1.30, L: 34.40,  w: 14.75,  O: 100.56, n: 0.0830853001 },
-    Saturn:  { a: 9.582017, e: 0.05555, i: 2.49, L: 49.94,  w: 92.43,  O: 113.72, n: 0.0334442282 },
-    Uranus:  { a: 19.22941, e: 0.04717, i: 0.77, L: 313.23, w: 170.96, O: 74.23,  n: 0.011725806 },
-    Neptune: { a: 30.06114, e: 0.00859, i: 1.77, L: 304.88, w: 44.97,  O: 131.72, n: 0.005995147 }
+    Mercury: { a: 0.387, e: 0.205, i: 7.00, L: 252.2, w: 77.4, O: 48.3, n: 4.092, color: 0xaaaaaa, r: 0.5, mass: "3.30e23", radius: "2,439", temp: "167", g: "3.7" },
+    Venus:   { a: 0.723, e: 0.006, i: 3.39, L: 181.9, w: 131.5, O: 76.6, n: 1.602, color: 0xffd700, r: 0.9, mass: "4.87e24", radius: "6,051", temp: "464", g: "8.87" },
+    Earth:   { a: 1.000, e: 0.016, i: 0.00, L: 100.4, w: 102.9, O: 0.0,  n: 0.985, color: 0x2255ff, r: 1.0, atmo: true, moons: true, mass: "5.97e24", radius: "6,371", temp: "15", g: "9.81" },
+    Mars:    { a: 1.523, e: 0.093, i: 1.85, L: 355.4, w: 336.0, O: 49.5, n: 0.524, color: 0xff4400, r: 0.7, mass: "6.42e23", radius: "3,389", temp: "-65", g: "3.71" },
+    Ceres:   { a: 2.767, e: 0.076, i: 10.59, L: 153.9, w: 73.0, O: 80.3, n: 0.214, color: 0x888888, r: 0.3, mass: "9.39e20", radius: "473", temp: "-105", g: "0.27" },
+    Jupiter: { a: 5.204, e: 0.048, i: 1.30, L: 34.4,  w: 14.7,  O: 100.5, n: 0.083, color: 0xd4a373, r: 2.4, mass: "1.90e27", radius: "69,911", temp: "-110", g: "24.79" },
+    Saturn:  { a: 9.582, e: 0.055, i: 2.49, L: 49.9,  w: 92.4,  O: 113.7, n: 0.033, color: 0xe3d081, r: 2.1, ring: true, mass: "5.68e26", radius: "58,232", temp: "-140", g: "10.44" },
+    Uranus:  { a: 19.22, e: 0.047, i: 0.77, L: 313.2, w: 170.9, O: 74.2,  n: 0.011, color: 0x40e0d0, r: 1.6, mass: "8.68e25", radius: "25,362", temp: "-195", g: "8.69" },
+    Neptune: { a: 30.06, e: 0.008, i: 1.77, L: 304.8, w: 44.9,  O: 131.7, n: 0.005, color: 0x3333ff, r: 1.6, mass: "1.02e26", radius: "24,622", temp: "-200", g: "11.15" },
+    Pluto:   { a: 39.48, e: 0.248, i: 17.16, L: 238.9, w: 224.0, O: 110.3, n: 0.004, color: 0xdddddd, r: 0.4, mass: "1.30e22", radius: "1,188", temp: "-225", g: "0.62" },
+    Halley:  { a: 17.83, e: 0.967, i: 162.2, L: 38.0,  w: 111.3, O: 58.1,  n: 0.013, color: 0xffffff, r: 0.3, mass: "2.2e14", radius: "5.5", temp: "Sublimating", g: "0.001" } // Comet
 };
 
-// Colors & Scales (Visual Radius)
-const VISUALS = {
-    Sun:     { r: 4.0, c: 0xffaa00, emit: true },
-    Mercury: { r: 0.5, c: 0xaaaaaa },
-    Venus:   { r: 0.9, c: 0xffd700 },
-    Earth:   { r: 1.0, c: 0x2255ff, atmo: true },
-    Mars:    { r: 0.7, c: 0xff4400 },
-    Jupiter: { r: 2.4, c: 0xd4a373 },
-    Saturn:  { r: 2.1, c: 0xe3d081, ring: true },
-    Uranus:  { r: 1.6, c: 0x40e0d0 },
-    Neptune: { r: 1.6, c: 0x3333ff }
-};
+const MOON_DATA = { a: 0.00257, e: 0.0549, i: 5.145, n: 13.176 }; 
 
 class EphemerisSystem {
     constructor() {
@@ -182,156 +220,162 @@ class EphemerisSystem {
         this.bodies = {};
     }
 
-    update(daysToAdd) {
-        this.julianDate += daysToAdd;
-        const d = this.julianDate - J2000; // Days since J2000
+    update(days) {
+        this.julianDate += days;
+        const d = this.julianDate - J2000;
 
         for (const [name, data] of Object.entries(PLANET_DATA)) {
-            // 1. Calculate Mean Anomaly (M)
-            let M = (data.L - data.w + data.n * d) % 360;
-            if (M < 0) M += 360;
-            const M_rad = M * Math.PI / 180;
+            const pos = this.calcKepler(data, d);
+            const vPos = new THREE.Vector3(pos.x * DIST_SCALE, pos.z * DIST_SCALE, pos.y * DIST_SCALE);
+            this.bodies[name] = { pos: vPos, r: pos.r };
 
-            // 2. Solve Kepler's Equation for Eccentric Anomaly (E)
-            let E = M_rad;
-            let delta = 1.0;
-            let iters = 0;
-            while (Math.abs(delta) > 1e-6 && iters < 10) {
-                delta = E - data.e * Math.sin(E) - M_rad;
-                E = E - delta / (1 - data.e * Math.cos(E));
-                iters++;
+            if (name === 'Earth' && data.moons) {
+                const mPos = this.calcKepler({ ...MOON_DATA, L:0, w:0, O:0 }, d); 
+                const mVisual = new THREE.Vector3(mPos.x, mPos.z, mPos.y).multiplyScalar(MOON_SCALE * DIST_SCALE);
+                this.bodies['Moon'] = { pos: vPos.clone().add(mVisual) };
             }
-
-            // 3. True Anomaly (v) and Radius (r)
-            const xv = data.a * (Math.cos(E) - data.e);
-            const yv = data.a * Math.sqrt(1 - data.e*data.e) * Math.sin(E);
-            const v = Math.atan2(yv, xv); 
-            const r = Math.sqrt(xv*xv + yv*yv); // Distance in AU
-
-            // 4. Heliocentric Coordinates (3D Space)
-            const O_rad = data.O * Math.PI / 180;
-            const w_rad = data.w * Math.PI / 180;
-            const i_rad = data.i * Math.PI / 180;
-
-            // Compute normalized 3D position (in AU)
-            let x = r * (Math.cos(O_rad) * Math.cos(v + w_rad - O_rad) - Math.sin(O_rad) * Math.sin(v + w_rad - O_rad) * Math.cos(i_rad));
-            let y = r * (Math.sin(O_rad) * Math.cos(v + w_rad - O_rad) + Math.cos(O_rad) * Math.sin(v + w_rad - O_rad) * Math.cos(i_rad));
-            let z = r * (Math.sin(v + w_rad - O_rad) * Math.sin(i_rad));
-
-            // 5. APPLY VISUAL SCALING
-            // We multiply by DIST_SCALE to spread planets out visually from the Sun
-            const visualX = x * DIST_SCALE;
-            const visualY = y * DIST_SCALE;
-            const visualZ = z * DIST_SCALE;
-
-            // Velocity approximation
-            const GM = 39.478; 
-            const velMag = Math.sqrt(GM * (2/r - 1/data.a));
-
-            // Store result (Swap Y/Z for Three.js)
-            this.bodies[name] = { 
-                pos: new THREE.Vector3(visualX, visualZ, visualY),
-                r: r,
-                v: velMag
-            };
         }
     }
+
+    calcKepler(data, d) {
+        let M = (data.L - data.w + data.n * d) % 360;
+        if (M < 0) M += 360;
+        const M_rad = M * Math.PI / 180;
+        let E = M_rad;
+        for(let k=0; k<5; k++) E = M_rad + data.e * Math.sin(E); 
+        
+        const xv = data.a * (Math.cos(E) - data.e);
+        const yv = data.a * Math.sqrt(1 - data.e*data.e) * Math.sin(E);
+        const r = Math.sqrt(xv*xv + yv*yv);
+        const v = Math.atan2(yv, xv);
+        
+        const O_rad = (data.O || 0) * Math.PI / 180;
+        const w_rad = (data.w || 0) * Math.PI / 180;
+        const i_rad = (data.i || 0) * Math.PI / 180;
+
+        const x = r * (Math.cos(O_rad)*Math.cos(v+w_rad-O_rad) - Math.sin(O_rad)*Math.sin(v+w_rad-O_rad)*Math.cos(i_rad));
+        const y = r * (Math.sin(O_rad)*Math.cos(v+w_rad-O_rad) + Math.cos(O_rad)*Math.sin(v+w_rad-O_rad)*Math.cos(i_rad));
+        const z = r * (Math.sin(v+w_rad-O_rad)*Math.sin(i_rad));
+        
+        return { x, y, z, r };
+    }
     
+    // JS Date <-> Julian Date Conversion
+    setDate(dateStr) {
+        const date = new Date(dateStr);
+        this.julianDate = (date.getTime() / 86400000) + 2440587.5;
+    }
+
     getDateString() {
         const date = new Date("2000-01-01T12:00:00Z");
-        const diffDays = this.julianDate - J2000;
-        date.setDate(date.getDate() + diffDays);
-        return date.toDateString().toUpperCase();
+        date.setDate(date.getDate() + (this.julianDate - J2000));
+        return date.toISOString().split('T')[0];
     }
 }
 
 // =================================================================
-// 2. THREE.JS VISUALIZATION
+// 2. VISUALIZATION
 // =================================================================
 let scene, camera, renderer, controls, sunLight;
-let meshes = {};
-let trails = {};
+let meshes = {}, orbits = [], asteroids, kuiper, transferOrbitLine;
 let eph = new EphemerisSystem();
-let isPaused = false;
-let timeScale = 1.0;
+let isPaused = false, timeScale = 1.0;
 let targetName = "Sun";
 let viewMode = "ORBIT"; 
 
 function init() {
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0b0c10, 0.0005); // Less fog to see distance
+    scene.fog = new THREE.FogExp2(0x050505, 0.0003);
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 50000);
-    // Adjusted initial camera for larger scale
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100000);
     camera.position.set(0, 100, 150);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.domElement.id = 'simCanvas';
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
     document.getElementById('container').appendChild(renderer.domElement);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
-    controls.maxDistance = 2000;
+    controls.maxDistance = 5000;
 
-    const ambient = new THREE.AmbientLight(0x222222);
-    scene.add(ambient);
-    
-    sunLight = new THREE.PointLight(0xffddaa, 2.0, 5000); // Increased range
+    // Lighting
+    scene.add(new THREE.AmbientLight(0x222222));
+    sunLight = new THREE.PointLight(0xffddaa, 1.5, 5000);
     scene.add(sunLight);
 
-    createStarfield();
-    createSolarSystem();
+    createUniverse();
+    createSystem();
     createUI();
+
+    // Set initial date picker value
+    document.getElementById('datePicker').value = eph.getDateString();
 
     animate();
 }
 
-function createSolarSystem() {
+function createUniverse() {
+    // Starfield
+    const geo = new THREE.BufferGeometry();
+    const pos = [], col = [];
+    for(let i=0; i<6000; i++) {
+        const r = 4000 + Math.random()*2000;
+        const theta = Math.random()*Math.PI*2;
+        const phi = Math.acos(2*Math.random()-1);
+        pos.push(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi));
+        const c = new THREE.Color().setHSL(Math.random(), 0.5, 0.8);
+        col.push(c.r, c.g, c.b);
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.5, vertexColors: true })));
+
+    // Belts
+    scene.add(createBelt(2500, 2.2 * DIST_SCALE, 3.2 * DIST_SCALE, 0x888888));
+    scene.add(createBelt(5000, 35 * DIST_SCALE, 55 * DIST_SCALE, 0x446688));
+}
+
+function createBelt(count, minR, maxR, colorHex) {
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+    for(let i=0; i<count; i++) {
+        const r = minR + Math.random() * (maxR - minR);
+        const theta = Math.random() * Math.PI * 2;
+        const y = (Math.random() - 0.5) * (r * 0.15); 
+        pos.push(r * Math.cos(theta), y, r * Math.sin(theta));
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    return new THREE.Points(geo, new THREE.PointsMaterial({ color: colorHex, size: 1.2, transparent: true, opacity: 0.6 }));
+}
+
+function createSystem() {
     // Sun
-    const sunGeo = new THREE.SphereGeometry(VISUALS.Sun.r, 32, 32);
-    const sunMat = new THREE.MeshBasicMaterial({ color: VISUALS.Sun.c });
-    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(4, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa00 }));
     scene.add(sunMesh);
     meshes['Sun'] = sunMesh;
     
-    const glowMat = new THREE.SpriteMaterial({ 
-        map: new THREE.CanvasTexture(generateGlowTexture()), 
-        color: 0xffaa00, 
-        blending: THREE.AdditiveBlending 
-    });
-    const glow = new THREE.Sprite(glowMat);
-    glow.scale.set(15, 15, 1);
-    sunMesh.add(glow);
+    // Sun Glow
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+        map: new THREE.CanvasTexture(makeGlow()), 
+        color: 0xffaa00, blending: THREE.AdditiveBlending 
+    }));
+    sprite.scale.set(20, 20, 1);
+    sunMesh.add(sprite);
 
     // Planets
-    for(const name in PLANET_DATA) {
-        const conf = VISUALS[name];
+    for(const [name, d] of Object.entries(PLANET_DATA)) {
+        const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 32, 32),
+            new THREE.MeshStandardMaterial({ color: d.color, roughness: 0.7 })
+        );
+        mesh.scale.setScalar(d.r * 0.5);
         
-        const geo = new THREE.SphereGeometry(1, 32, 32); 
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: conf.c, 
-            roughness: 0.7, 
-            metalness: 0.1 
-        });
-        const mesh = new THREE.Mesh(geo, mat);
-        const s = conf.r * 0.5;
-        mesh.scale.set(s, s, s);
-        
-        if(conf.atmo) {
-            const atmo = new THREE.Mesh(
-                new THREE.SphereGeometry(1.2, 32, 32),
-                new THREE.MeshBasicMaterial({ color: 0x44aaff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending })
-            );
-            mesh.add(atmo);
+        if(d.atmo) {
+            mesh.add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0x44aaff, transparent:true, opacity:0.2, blending:THREE.AdditiveBlending })));
         }
-
-        if(conf.ring) {
-            const ringGeo = new THREE.RingGeometry(1.4, 2.2, 64);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0xcbb677, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
+        if(d.ring) {
+            const ring = new THREE.Mesh(new THREE.RingGeometry(1.4, 2.2, 64), new THREE.MeshBasicMaterial({ color: 0xcbb677, side:THREE.DoubleSide, transparent:true, opacity:0.6 }));
             ring.rotation.x = Math.PI/2;
             mesh.add(ring);
         }
@@ -339,93 +383,130 @@ function createSolarSystem() {
         scene.add(mesh);
         meshes[name] = mesh;
 
-        // Trail
-        const trailGeo = new THREE.BufferGeometry();
+        // Orbit Line
         const pts = [];
-        const periodApprox = Math.pow(PLANET_DATA[name].a, 1.5) * 365;
-        const tempEph = new EphemerisSystem();
-        tempEph.julianDate = J2000;
-        
-        // Compute visual trail points
-        for(let i=0; i<=150; i++) {
-            tempEph.update(periodApprox/150);
-            const b = tempEph.bodies[name];
-            // Ensure we use the exact same scaling logic as main update
-            pts.push(b.pos.x, b.pos.y, b.pos.z);
+        const sim = new EphemerisSystem(); 
+        sim.julianDate = J2000;
+        const orbitLen = Math.pow(d.a, 1.5) * 365;
+        const steps = 150; 
+        for(let i=0; i<=steps; i++) {
+            sim.update(orbitLen/steps);
+            pts.push(sim.bodies[name].pos);
         }
-        trailGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-        const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: conf.c, transparent:true, opacity:0.3 }));
-        scene.add(trail);
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: d.color, transparent:true, opacity:name==='Halley'?0.5:0.2 }));
+        scene.add(line);
+        orbits.push(line);
     }
+
+    // Moon
+    const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshStandardMaterial({ color: 0xaaaaaa }));
+    scene.add(moonMesh);
+    meshes['Moon'] = moonMesh;
 }
 
-function generateGlowTexture() {
-    const cvs = document.createElement('canvas'); cvs.width = 64; cvs.height = 64;
-    const ctx = cvs.getContext('2d');
-    const g = ctx.createRadialGradient(32,32,0, 32,32,32);
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(0.4, 'rgba(255,200,100,0.5)');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
+function makeGlow() {
+    const c = document.createElement('canvas'); c.width=64; c.height=64;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
-    return cvs;
-}
-
-function createStarfield() {
-    const geo = new THREE.BufferGeometry();
-    const pos = []; const col = []; const c = new THREE.Color();
-    for(let i=0; i<3000; i++) {
-        // Expanded starfield for larger scale
-        const x = (Math.random()-0.5)*4000;
-        const y = (Math.random()-0.5)*4000;
-        const z = (Math.random()-0.5)*4000;
-        pos.push(x,y,z);
-        c.setHSL(Math.random(), 0.5, 0.8);
-        col.push(c.r, c.g, c.b);
-    }
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    const mat = new THREE.PointsMaterial({ size:1.5, vertexColors:true, transparent:true, opacity:0.8 });
-    scene.add(new THREE.Points(geo, mat));
+    return c;
 }
 
 // =================================================================
-// 3. UI & ANALYTICS
+// 3. UI, EVENTS, LOGIC
 // =================================================================
 function createUI() {
+    // Generate Target Buttons
     const grid = document.getElementById('targetGrid');
-    ['Sun', ...Object.keys(PLANET_DATA)].forEach(name => {
-        const btn = document.createElement('div');
-        btn.className = `t-btn ${name==='Sun'?'active':''}`;
-        btn.innerText = name.toUpperCase();
-        btn.onclick = () => {
-            targetName = name;
-            document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        };
-        grid.appendChild(btn);
+    ['Sun', ...Object.keys(PLANET_DATA)].forEach(n => {
+        const b = document.createElement('div');
+        b.className = `t-btn ${n==='Sun'?'active':''}`; b.innerText = n.toUpperCase();
+        b.onclick = () => setTarget(n, b);
+        grid.appendChild(b);
     });
 
-    document.getElementById('speedSlider').addEventListener('input', (e) => {
+    // Populate Mission Planner Dropdowns
+    const dropA = document.getElementById('startPlanet');
+    const dropB = document.getElementById('endPlanet');
+    Object.keys(PLANET_DATA).forEach(n => {
+        if(n === 'Halley') return; // Cannot launch from comet
+        dropA.add(new Option(n, n));
+        dropB.add(new Option(n, n));
+    });
+    dropA.value = 'Earth'; dropB.value = 'Mars';
+
+    // Event Listeners
+    document.getElementById('speedSlider').addEventListener('input', e => {
         timeScale = parseFloat(e.target.value);
-        document.getElementById('timeScale').innerText = timeScale.toFixed(1) + " DAYS/TICK";
+        document.getElementById('timeScale').innerText = timeScale.toFixed(1) + " DAY/TICK";
     });
 
-    document.getElementById('btnPause').addEventListener('click', function() {
-        isPaused = !isPaused;
-        this.innerText = isPaused ? "RESUME TIME" : "PAUSE TIME";
-        this.classList.toggle('active');
+    // JUMP TO DATE
+    document.getElementById('datePicker').addEventListener('change', e => {
+        eph.setDate(e.target.value);
     });
 
-    document.getElementById('btnView').addEventListener('click', function() {
-        viewMode = viewMode === 'ORBIT' ? 'OBSERVE' : 'ORBIT';
-        this.innerText = viewMode === 'ORBIT' ? 'VIEW: ORBIT' : 'VIEW: OBSERVATORY';
+    document.getElementById('btnPause').onclick = function() {
+        isPaused = !isPaused; this.innerText = isPaused ? "RESUME" : "PAUSE";
         this.classList.toggle('active');
+    };
+
+    document.getElementById('btnView').onclick = function() {
+        viewMode = viewMode==='ORBIT' ? 'OBSERVE' : 'ORBIT';
+        this.innerText = viewMode==='ORBIT' ? 'VIEW: ORBIT' : 'VIEW: OBSERVATORY';
+        this.classList.toggle('active');
+    };
+
+    document.getElementById('btnCalcMission').onclick = calculateHohmann;
+
+    // Manual Zoom Controls
+    document.getElementById('btnZoomIn').onclick = () => {
+        // Zoom in (reduce distance)
+        const offset = camera.position.clone().sub(controls.target);
+        const dist = offset.length() / 1.2;
+        offset.setLength(Math.max(dist, controls.minDistance));
+        camera.position.copy(controls.target).add(offset);
+        controls.update(); // Important to update the controller state
+    };
+    
+    document.getElementById('btnZoomOut').onclick = () => {
+        // Zoom out (increase distance)
+        const offset = camera.position.clone().sub(controls.target);
+        const dist = offset.length() * 1.2;
+        offset.setLength(Math.min(dist, controls.maxDistance));
+        camera.position.copy(controls.target).add(offset);
+        controls.update();
+    };
+
+    // Raycaster
+    const ray = new THREE.Raycaster(); const ptr = new THREE.Vector2();
+    window.addEventListener('mousemove', e => {
+        ptr.x = (e.clientX/window.innerWidth)*2-1; ptr.y = -(e.clientY/window.innerHeight)*2+1;
+        ray.setFromCamera(ptr, camera);
+        const hits = ray.intersectObjects(Object.values(meshes));
+        const tip = document.getElementById('tooltip');
+        if(hits.length) {
+            let o = hits[0].object; while(o.parent?.type==='Mesh') o = o.parent;
+            const n = Object.keys(meshes).find(k=>meshes[k]===o);
+            if(n) {
+                tip.style.opacity = 1; tip.style.left = e.clientX+'px'; tip.style.top = e.clientY+'px';
+                const col = n==='Sun'?'#fc0':(PLANET_DATA[n]?.color.toString(16) || 'fff');
+                tip.innerHTML = `<span class="badge" style="background:#${col}"></span>${n.toUpperCase()}`;
+            }
+        } else tip.style.opacity = 0;
     });
 
-    document.getElementById('btnData').addEventListener('click', function() {
-        const el = document.getElementById('analytics');
-        el.classList.toggle('visible');
-        this.classList.toggle('active');
+    window.addEventListener('click', e => {
+        if(e.target.closest('.panel') || e.target.closest('.zoom-controls')) return; 
+        ray.setFromCamera(ptr, camera);
+        const hits = ray.intersectObjects(Object.values(meshes));
+        if(hits.length) {
+            let o = hits[0].object; while(o.parent?.type==='Mesh') o = o.parent;
+            const n = Object.keys(meshes).find(k=>meshes[k]===o);
+            if(n) setTarget(n);
+        }
     });
 
     window.addEventListener('resize', () => {
@@ -433,110 +514,123 @@ function createUI() {
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
+}
 
-    const ray = new THREE.Raycaster();
-    const ptr = new THREE.Vector2();
-    window.addEventListener('mousemove', (e) => {
-        ptr.x = (e.clientX/window.innerWidth)*2 - 1;
-        ptr.y = -(e.clientY/window.innerHeight)*2 + 1;
-        ray.setFromCamera(ptr, camera);
-        
-        const hits = ray.intersectObjects(Object.values(meshes));
-        const tip = document.getElementById('tooltip');
-        if(hits.length > 0) {
-            let obj = hits[0].object;
-            while(obj.parent && obj.parent.type === 'Mesh') obj = obj.parent;
-            const name = Object.keys(meshes).find(key => meshes[key] === obj);
-            if(name) {
-                tip.style.opacity = 1;
-                tip.style.left = e.clientX + 'px';
-                tip.style.top = e.clientY + 'px';
-                tip.innerText = name.toUpperCase();
-            }
-        } else {
-            tip.style.opacity = 0;
-        }
+function setTarget(name, btnEl) {
+    targetName = name;
+    // Update Grid UI
+    document.querySelectorAll('.t-btn').forEach(x => {
+        x.classList.toggle('active', x.innerText === name.toUpperCase());
     });
-}
-
-const pDist = initPlot('plotDist', '#66fcf1');
-const pVel = initPlot('plotVel', '#e040fb');
-
-function initPlot(id, color) {
-    const cvs = document.getElementById(id);
-    cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
-    return { ctx: cvs.getContext('2d'), data: [], color: color, w:cvs.width, h:cvs.height };
-}
-
-function drawPlot(p, val) {
-    p.data.push(val);
-    if(p.data.length > 100) p.data.shift();
     
-    const ctx = p.ctx;
-    ctx.clearRect(0,0,p.w,p.h);
+    // Show Info Panel
+    const panel = document.getElementById('info-panel');
+    const content = document.getElementById('infoContent');
+    const title = document.getElementById('infoTitle');
     
-    let min = Math.min(...p.data);
-    let max = Math.max(...p.data);
-    let range = max - min;
-    if(range < 0.0001) range = 0.0001;
-
-    ctx.strokeStyle = p.color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for(let i=0; i<p.data.length; i++) {
-        const x = (i/99) * p.w;
-        const n = (p.data[i] - min) / range;
-        const y = p.h - (n * (p.h*0.8) + p.h*0.1);
-        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    if(name === 'Sun' || !PLANET_DATA[name]) {
+        panel.classList.remove('visible');
+    } else {
+        const d = PLANET_DATA[name];
+        title.innerText = `${name.toUpperCase()} DATA`;
+        content.innerHTML = `
+            <div class="info-row"><span class="info-label">MASS (kg)</span> <span class="info-data">${d.mass}</span></div>
+            <div class="info-row"><span class="info-label">RADIUS (km)</span> <span class="info-data">${d.radius}</span></div>
+            <div class="info-row"><span class="info-label">TEMP (°C)</span> <span class="info-data">${d.temp}</span></div>
+            <div class="info-row"><span class="info-label">GRAVITY (m/s²)</span> <span class="info-data">${d.g}</span></div>
+            <div class="info-row"><span class="info-label">SEMI-MAJOR (AU)</span> <span class="info-data">${d.a}</span></div>
+            <div class="info-row"><span class="info-label">ORBITAL PERIOD</span> <span class="info-data">${(Math.pow(d.a, 1.5)).toFixed(2)} YR</span></div>
+        `;
+        panel.classList.add('visible');
     }
-    ctx.stroke();
 }
 
 // =================================================================
-// 4. MAIN LOOP
+// 4. MISSION PLANNER LOGIC
+// =================================================================
+function calculateHohmann() {
+    const startName = document.getElementById('startPlanet').value;
+    const endName = document.getElementById('endPlanet').value;
+    const resBox = document.getElementById('missionResults');
+    
+    if(startName === endName) { resBox.innerText = "Select different planets."; return; }
+
+    const r1 = PLANET_DATA[startName].a;
+    const r2 = PLANET_DATA[endName].a;
+    
+    // Hohmann Calculation
+    const v1 = 29.78 / Math.sqrt(r1);
+    const v2 = 29.78 / Math.sqrt(r2);
+    
+    // Transfer orbit
+    const a_trans = (r1 + r2) / 2;
+    // Standard formula approximation
+    const dv1 = v1 * (Math.sqrt((2*r2)/(r1+r2)) - 1);
+    const dv2 = v2 * (1 - Math.sqrt((2*r1)/(r1+r2)));
+    const totalDv = Math.abs(dv1) + Math.abs(dv2);
+    
+    const tofYears = 0.5 * Math.pow(a_trans, 1.5);
+    const tofDays = tofYears * 365.25;
+
+    resBox.style.display = 'block';
+    resBox.innerHTML = `
+        <strong>MISSION PROFILE:</strong><br>
+        TOF: <span style="color:#fff">${tofDays.toFixed(0)} DAYS</span><br>
+        TOTAL Δv: <span style="color:#fff">${totalDv.toFixed(2)} km/s</span><br>
+        WINDOW: <span style="color:#fff">${(tofYears*100).toFixed(0)}% OPTIMAL</span>
+    `;
+
+    // Visualize Transfer Orbit (Ghost)
+    if(transferOrbitLine) scene.remove(transferOrbitLine);
+    
+    const curve = new THREE.EllipseCurve(
+        0, 0,            // ax, aY
+        a_trans * DIST_SCALE, (a_trans * 0.8) * DIST_SCALE, // xRadius, yRadius (approx)
+        0, Math.PI,  // aStartAngle, aEndAngle
+        false,            // aClockwise
+        0                 // aRotation
+    );
+    const transferGeo = new THREE.BufferGeometry().setFromPoints(new THREE.Path(curve.getPoints(50)).getPoints());
+    transferOrbitLine = new THREE.Line(transferGeo, new THREE.LineDashedMaterial({ color: 0xffff00, dashSize: 10, gapSize: 5 }));
+    transferOrbitLine.rotation.x = Math.PI/2;
+    transferOrbitLine.computeLineDistances();
+    scene.add(transferOrbitLine);
+}
+
+// =================================================================
+// 5. LOOP
 // =================================================================
 function animate() {
     requestAnimationFrame(animate);
-
-    if (!isPaused) {
-        eph.update(timeScale); 
-        document.getElementById('simDate').innerText = eph.getDateString();
-    }
-
-    // Sync Meshes
-    for (const [name, mesh] of Object.entries(meshes)) {
-        if(name === 'Sun') continue;
-        const data = eph.bodies[name];
-        mesh.position.copy(data.pos);
-    }
-
-    // Camera Logic
-    const targetMesh = meshes[targetName];
-    if (targetMesh) {
-        const tPos = targetMesh.position;
+    controls.update(); // Add inertia
+    
+    if(!isPaused) {
+        eph.update(timeScale);
+        document.getElementById('datePicker').value = eph.getDateString();
         
-        controls.target.lerp(tPos, 0.1);
+        if(asteroids) asteroids.rotation.y += 0.0002 * timeScale;
+        if(kuiper) kuiper.rotation.y += 0.00005 * timeScale;
+    }
 
-        if (viewMode === 'OBSERVE' && targetName !== 'Sun') {
-            // Observatory View: Above pole, looking at Sun
-            // Using mesh.scale.y (radius*0.5) as reference
-            const offset = targetMesh.scale.y * 3.0; // Distance above surface
-            const obsPos = tPos.clone().add(new THREE.Vector3(0, offset, 0));
-            camera.position.lerp(obsPos, 0.1);
+    // Sync
+    for(const [n, d] of Object.entries(eph.bodies)) {
+        if(meshes[n]) meshes[n].position.copy(d.pos);
+    }
+
+    // Camera
+    const tMesh = meshes[targetName];
+    if(tMesh) {
+        const p = tMesh.position;
+        // Smoothly interpolate the orbit control target to the planet
+        controls.target.lerp(p, 0.1);
+        
+        if(viewMode === 'OBSERVE' && targetName !== 'Sun') {
+            const offset = (PLANET_DATA[targetName]?.r || 1) * 3;
+            camera.position.lerp(new THREE.Vector3(p.x, p.y+offset, p.z), 0.1);
             camera.lookAt(0,0,0);
         }
     }
     
-    controls.update();
-
-    if (targetName !== 'Sun' && eph.bodies[targetName]) {
-        const d = eph.bodies[targetName];
-        drawPlot(pDist, d.r);
-        drawPlot(pVel, d.v * 4.74); 
-        document.getElementById('valDist').innerText = d.r.toFixed(3);
-        document.getElementById('valVel').innerText = (d.v * 4.74).toFixed(1);
-    }
-
     renderer.render(scene, camera);
 }
 
