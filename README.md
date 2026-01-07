@@ -1,5 +1,7 @@
 # Gravitational_Dynamics_Simulator
 This simulator calculates real time gravitational forces between celestial bodies, allowing for accurate orbital mechanics, chaotic interactions, and relativistic black hole visualization.
+Demo link : https://blaze505050.github.io/Gravitational_Dynamics_Simulator/ 
+
 Controls & Navigation :
 Rotate View (3D): Right Click + Drag.
 Pan Camera: Left Click + Drag (on empty space).
