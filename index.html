@@ -97,7 +97,6 @@
     <div class="absolute top-4 left-4 w-72 flex flex-col gap-4 pointer-events-none">
         <div class="hud-panel p-4 pointer-events-auto max-h-[90vh] overflow-y-auto">
             <h1 class="text-lg font-bold header-text">System Control</h1>
-            
             <div id="stats" class="mb-4 text-xs font-mono">
                 BODIES: <span class="data-value">0</span>
             </div>
@@ -125,6 +124,10 @@
                         <button onclick="templateGalaxy()" class="btn-sci">Galaxy</button>
                         <button onclick="templateBlackHole()" class="btn-sci">Black Hole</button>
                         <button onclick="templateChaos()" class="btn-sci col-span-2">Chaos Stars</button>
+                        <button onclick="templateM87Jet()" class="btn-sci col-span-2">M87* Jet</button>
+                        <button onclick="templateRunawayBH()" class="btn-sci col-span-2">Runaway SMBH</button>
+                        <button onclick="templateTRAPPIST()" class="btn-sci col-span-1">TRAPPIST-1</button>
+                        <button onclick="templateLagrange()" class="btn-sci col-span-1">Lagrange Points</button>
                     </div>
                 </div>
 
@@ -160,12 +163,44 @@
                             <input type="checkbox" id="checkCollisions" checked>
                             <span class="text-xs text-gray-300">Collisions (Merge)</span>
                         </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="checkFOV">
+                            <span class="text-xs text-gray-300">Instrument FOV</span>
+                        </label>
                     </div>
                 </div>
 
                 <div class="flex gap-2 mt-2">
                     <button id="btnPurge" onclick="clearSim()" class="hidden bg-red-900/50 hover:bg-red-900 text-red-200 py-1 px-4 text-xs font-bold border border-red-800 transition flex-1">PURGE (CLEAR)</button>
                     <button onclick="resetCam()" class="bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 text-xs font-bold border border-gray-500 transition flex-1">RESET CAM</button>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="data-label font-bold">Camera Mode</label>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button id="camFree" onclick="setCameraMode('free')" class="btn-sci text-[10px] active-mode">Free</button>
+                    <button id="camFollow" onclick="setCameraMode('follow')" class="btn-sci text-[10px] opacity-50">Follow</button>
+                    <button id="camChase" onclick="setCameraMode('chase')" class="btn-sci text-[10px] opacity-50">Chase</button>
+                    <button id="camGod" onclick="setCameraMode('god')" class="btn-sci text-[10px] opacity-50">God's Eye</button>
+                </div>
+            </div>
+
+            <div class="mt-3 flex gap-2">
+                <button onclick="toggleRelativityOverlay()" id="btnRelOverlay" class="btn-sci flex-1 text-[10px] opacity-50">Relativity Overlay</button>
+                <button onclick="takeSnapshot()" class="btn-sci flex-1 text-[10px]">Snapshot</button>
+                <button onclick="toggleHelp()" class="btn-sci flex-1 text-[10px]">Help</button>
+            </div>
+
+            <div class="mt-3">
+                <label class="data-label font-bold">Session</label>
+                <div class="grid grid-cols-3 gap-2 mt-2">
+                    <button onclick="saveSession()" class="btn-sci text-[10px]">Save</button>
+                    <button onclick="loadSession()" class="btn-sci text-[10px]">Load</button>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="checkAutoload">
+                        <span class="text-xs text-gray-300">Auto-Load</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -193,27 +228,67 @@
                 <span class="data-label">Mass:</span> <span id="targetMass" class="text-white">1.0 M⊕</span>
                 <span class="data-label">Speed:</span> <span id="targetVel" class="text-white">29.7 km/s</span>
                 <span id="distLabel" class="data-label">Dist Earth:</span> <span id="targetDist" class="text-white">1.0 AU</span>
+                <span class="data-label">Hill Sphere:</span> <span id="targetHill" class="text-white">--</span>
+                <span class="data-label">L1/L2:</span> <span id="targetLpoints" class="text-white">--</span>
+                <span class="data-label">Time Dilation:</span> <span id="targetTimeDil" class="text-white">1.00x</span>
+                <span class="data-label">Curvature:</span> <span id="targetCurve" class="text-white">--</span>
+            </div>
+
+            <div id="orbitRelBlock" class="mt-2 text-[10px] text-gray-300 hidden">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="data-label">Orbit Radius:</span>
+                    <span id="orbitRadiusLabel" class="text-white">--</span>
+                </div>
+                <input type="range" id="orbitRadiusSlider" min="2" max="20" step="0.5" class="w-full">
+                <div class="grid grid-cols-2 gap-y-1 mt-1">
+                    <span class="data-label">Orbital Time Dil.:</span>
+                    <span id="orbitTimeDil" class="text-white">1.00x</span>
+                    <span class="data-label">Orbital Curv.:</span>
+                    <span id="orbitCurve" class="text-white">--</span>
+                </div>
+            </div>
+            <div class="mt-2">
+                <button onclick="openJWSTLive()" class="btn-sci w-full text-[10px]">JWST Live</button>
             </div>
         </div>
 
         <!-- Navigation Menu -->
         <div class="hud-panel p-4 pointer-events-auto max-h-[60vh] overflow-y-auto">
             <h2 class="text-sm font-bold header-text">Celestial Database</h2>
+            <input id="navSearch" type="text" placeholder="Search..." class="w-full text-xs bg-gray-800 border border-white/10 rounded px-2 py-1 mt-1 focus:outline-none focus:border-[#66fcf1]">
             
             <div id="navMenu">
                 <!-- Populated by JS -->
             </div>
         </div>
         
-        <!-- AI Control (Mini) -->
-        <div class="hud-panel p-4 pointer-events-auto">
-            <h2 class="text-sm font-bold header-text mb-2">AI Architect</h2>
-            <p class="text-[10px] text-gray-400 mb-2 italic">Describe what you want to create...</p>
-            <div class="flex gap-2">
-                <input type="text" id="aiPrompt" placeholder="e.g. A binary black hole waltz..." class="bg-black/30 border border-[#45a29e] text-xs p-1 w-full text-white">
-                <button onclick="generateScenario()" id="btnGenerate" class="btn-sci text-[10px]">GO</button>
+        <!-- JWST Live -->
+        <!-- JWST Live compact replaced by floating button -->
+    </div>
+
+    <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center">
+        <div class="hud-panel p-4 w-96 pointer-events-auto">
+            <label class="data-label font-bold">Help & Controls</label>
+            <div class="text-xs text-gray-200 mt-2 space-y-2">
+                <div>Rotate: Right-Click + Drag</div>
+                <div>Pan: Left-Click + Drag</div>
+                <div>Zoom: Mouse Wheel</div>
+                <div>Select Body: Use Celestial Database</div>
+                <div>Camera Modes: Free / Follow / Chase / God's Eye</div>
+                <div>Relativity Overlay: Highlights curvature</div>
+                <div>Instrument FOV: Toggle to show spacecraft field-of-view</div>
+                <div>Session: Save / Load and Auto-Load last session</div>
+            </div>
+            <div class="mt-3 flex gap-2">
+                <button onclick="toggleHelp()" class="btn-sci flex-1 text-[10px]">Close</button>
             </div>
         </div>
+    </div>
+
+    <div class="fixed bottom-4 right-4 pointer-events-auto">
+        <button onclick="openJWSTLive()" class="bg-[#0b0c10]/80 hover:bg-[#0b0c10] text-[#66fcf1] border border-[#66fcf1]/40 rounded px-3 py-1 text-[10px]">
+            JWST Live
+        </button>
     </div>
 
 <script>
@@ -223,7 +298,7 @@
  * - Realistic Black Hole (Accretion, Lensing, Hawking Radiation, Jets)
  * - Tidal Disruption Events
  * - Dynamic AU Calculation relative to Earth
- * - Enhanced AI Architect & Spectral Color Palettes
+ * - Spectral Color Palettes
  * - Accurate Categorization & UI Cleanup
  */
 
@@ -237,9 +312,8 @@ var G = 0.1;
 var bodies = [];
 var particles = []; // Background stars
 var effects = [];   // Dynamic effects (explosions, hawking radiation)
-var apiKey = ""; 
-
 // System State
+var simTime = 0; 
 var simTime = 0; 
 var currentDate = new Date();
 var isPaused = false;
@@ -247,6 +321,11 @@ var selectedBody = null;
 var cameraLocked = false;
 var INTERACTION_MODE = 'view'; // 'view', 'slingshot'
 var CURRENT_TEMPLATE = 'solar';
+var REL_OVERLAY = false;
+var SHOW_FOV = false;
+var CAMERA_MODE = 'free';
+var orbitSliderInit = false;
+var AUTOSAVE_TIMER = null;
 
 // Interaction State
 var dragStart = { x: 0, y: 0 };
@@ -268,6 +347,7 @@ var mouse = { x: 0, y: 0, down: false, rightDown: false, lastX: 0, lastY: 0 };
 var SIM_SPEED = 1;
 var SHOW_TRAILS = true;
 var ENABLE_MERGING = true;
+var NAV_FILTER = '';
 
 // Init
 function resize() {
@@ -460,12 +540,12 @@ function mergeBodies(i, j) {
     const newColor = b1.mass > b2.mass ? b1.color : b2.color;
     const newName = b1.mass > b2.mass ? b1.name : b2.name;
 
-    // Type inheritance logic
+    const planetNames = ["Mercury","Venus","Earth","Mars","Jupiter","Saturn","Uranus","Neptune"];
     let newType = b1.mass > b2.mass ? b1.type : b2.type;
     
     if (totalMass > 2000) newType = "Supermassive BH";
     else if (totalMass > 200) newType = "Black Hole";
-    else if (totalMass > 80 && !newType.includes("Black Hole") && !newType.includes("Star") && !newType.includes("Quasar")) newType = "Star"; 
+    else if (totalMass > 80 && !newType.includes("Black Hole") && !newType.includes("Star") && !newType.includes("Quasar") && planetNames.indexOf(newName) === -1) newType = "Star"; 
     
     if (b1.type === "Quasar" || b2.type === "Quasar") newType = "Quasar";
     else if (b1.type.includes("Black Hole") || b2.type.includes("Black Hole")) {
@@ -489,6 +569,39 @@ function mergeBodies(i, j) {
     buildNavMenu();
 }
 
+function templateTRAPPIST() {
+    setTemplateUI('trappist');
+    clearSim();
+    camera.targetZoom = 0.9;
+    bodies.push(new Body("TRAPPIST-1", "Star", 1800, 9, "#ffbb88", 0,0,0, 0,0,0, "Ultracool dwarf star with compact resonant planets."));
+    const starMass = 1800;
+    const base = 30;
+    const colors = ["#8fd3ff","#a5f3d6","#ffe3a1","#ffcfad","#b7e0ff","#d4ffa8","#ffd7f0"];
+    for (let i = 0; i < 7; i++) {
+        const dist = base + i * 12;
+        const vel = Math.sqrt(G * starMass / dist);
+        bodies.push(new Body("TRAPPIST-" + String.fromCharCode(97 + i), "Planet", 5 + i, 2.0, colors[i % colors.length],
+            dist, 0, 0, 0, vel * (1 - i * 0.02), 0, "Compact resonant planet."));
+    }
+    buildNavMenu();
+}
+
+function templateLagrange() {
+    setTemplateUI('lagrange');
+    clearSim();
+    camera.targetZoom = 0.8;
+    const sun = new Body("Sun", "Star", 10000, 20, "#FFCC00", 0,0,0, 0,0,0, "Sun–Earth Lagrange points visualization.");
+    bodies.push(sun);
+    const earthDist = 110;
+    const earthVel = Math.sqrt(G * sun.mass / earthDist);
+    const earth = new Body("Earth", "Planet", 18, 5.2, "#45A29E", earthDist, 0, 0, 0, earthVel, 0, "Earth around Sun.");
+    bodies.push(earth);
+    const l1 = new Body("L1 Marker", "Marker", 0.001, 1.0, "#66fcf1", earthDist - 2.0, 0, 0, 0, earthVel, 0, "Approximate L1 near Earth.");
+    const l2 = new Body("L2 Marker", "Marker", 0.001, 1.0, "#66fcf1", earthDist + 2.0, 0, 0, 0, earthVel, 0, "Approximate L2 near Earth.");
+    bodies.push(l1); bodies.push(l2);
+    buildNavMenu();
+}
+
 // --- RENDERING ---
 
 var frameCount = 0;
@@ -500,7 +613,32 @@ function loop() {
     camera.yaw += (camera.targetYaw - camera.yaw) * 0.1;
     camera.pitch += (camera.targetPitch - camera.pitch) * 0.1;
 
-    if (selectedBody && cameraLocked) {
+    if (selectedBody) {
+        if (CAMERA_MODE === 'follow' || CAMERA_MODE === 'chase') {
+            cameraLocked = true;
+        }
+    }
+
+    if (CAMERA_MODE === 'god') {
+        let totalM = 0;
+        let cx = 0;
+        let cy = 0;
+        let cz = 0;
+        for (let b of bodies) {
+            totalM += b.mass;
+            cx += b.x * b.mass;
+            cy += b.y * b.mass;
+            cz += b.z * b.mass;
+        }
+        if (totalM > 0) {
+            cx /= totalM;
+            cy /= totalM;
+            cz /= totalM;
+            camera.x += (cx - camera.x) * 0.05;
+            camera.y += (cy - camera.y) * 0.05;
+            camera.z += (cz - camera.z) * 0.05;
+        }
+    } else if (selectedBody && cameraLocked) {
         camera.x += (selectedBody.x - camera.x) * 0.1;
         camera.y += (selectedBody.y - camera.y) * 0.1;
         camera.z += (selectedBody.z - camera.z) * 0.1;
@@ -508,6 +646,8 @@ function loop() {
 
     ctx.fillStyle = '#0b0c10';
     ctx.fillRect(0, 0, width, height);
+
+    drawSpacetimeFabric();
 
     // Starfield
     ctx.fillStyle = '#c5c6c7';
@@ -544,7 +684,11 @@ function loop() {
             // Render Effect Particle
             const e = item.obj;
             const r = Math.max(e.size * p.scale, 0.5);
-            ctx.globalAlpha = Math.min(1, e.life / 20); // Fade out
+            let alpha = Math.min(1, e.life / 20);
+            if (REL_OVERLAY) {
+                alpha *= 0.4;
+            }
+            ctx.globalAlpha = alpha;
             ctx.fillStyle = e.color;
             ctx.beginPath();
             ctx.arc(p.x, p.y, r, 0, Math.PI*2);
@@ -556,12 +700,19 @@ function loop() {
         // Render Body
         const b = item.obj;
 
+        let bodyAlpha = 1.0;
+        if (REL_OVERLAY) {
+            if (b.type.indexOf("Black Hole") !== -1 || b.type === "Quasar") bodyAlpha = 1.0;
+            else if (b.type === "Neutron Star") bodyAlpha = 0.9;
+            else bodyAlpha = 0.15;
+        }
+
         // Trail
         if (SHOW_TRAILS && b.trail.length > 1) {
             ctx.beginPath();
             ctx.strokeStyle = b.color;
             ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.4 * bodyAlpha;
             let first = true;
             for (let tp of b.trail) {
                 const tProj = project(tp.x, tp.y, tp.z);
@@ -653,15 +804,47 @@ function loop() {
             }
 
         } else {
-            // Standard Body
             ctx.beginPath();
             ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-            ctx.fillStyle = b.color;
             const grad = ctx.createRadialGradient(p.x - r*0.3, p.y - r*0.3, r*0.1, p.x, p.y, r);
             grad.addColorStop(0, adjustColor(b.color, 50));
             grad.addColorStop(1, b.color);
             ctx.fillStyle = grad;
+            ctx.globalAlpha = bodyAlpha;
             ctx.fill();
+            ctx.globalAlpha = 1.0;
+            if (b.name === "Jupiter") {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.clip();
+                const bandCount = 8;
+                for (let i = 0; i < bandCount; i++) {
+                    const t = i / bandCount;
+                    const bandY = p.y - r + t * 2 * r;
+                    ctx.fillStyle = i % 2 === 0 ? "rgba(230, 180, 120, 0.65)" : "rgba(210, 150, 90, 0.6)";
+                    ctx.fillRect(p.x - r, bandY - r * 0.08, 2 * r, r * 0.16);
+                }
+                ctx.restore();
+            }
+            if (b.name === "Saturn") {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(0.3);
+                const ringInner = r * 1.3;
+                const ringOuter = r * 2.1;
+                const ringGrad = ctx.createRadialGradient(0, 0, ringInner, 0, 0, ringOuter);
+                ringGrad.addColorStop(0, "rgba(240, 220, 180, 0.0)");
+                ringGrad.addColorStop(0.4, "rgba(240, 220, 180, 0.5)");
+                ringGrad.addColorStop(0.8, "rgba(190, 170, 130, 0.4)");
+                ringGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
+                ctx.fillStyle = ringGrad;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, ringOuter, ringOuter * 0.45, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalCompositeOperation = "destination-over";
+                ctx.restore();
+            }
         }
 
         // Selection Ring
@@ -674,6 +857,43 @@ function loop() {
             ctx.fillStyle = '#66fcf1';
             ctx.font = '10px monospace';
             ctx.fillText(b.name, p.x + r + 8, p.y + 3);
+
+            if (b.type === "Planet" || b.type === "Dwarf Planet" || b.type === "Spacecraft") {
+                let primary = null;
+                let minOrbDist = Infinity;
+                for (let pb of bodies) {
+                    if (pb === b) continue;
+                    if (pb.mass <= b.mass) continue;
+                    const dx = b.x - pb.x;
+                    const dy = b.y - pb.y;
+                    const dz = b.z - pb.z;
+                    const dOrb = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    if (dOrb < minOrbDist) {
+                        minOrbDist = dOrb;
+                        primary = pb;
+                    }
+                }
+                if (primary && minOrbDist > 0) {
+                    const a = minOrbDist;
+                    const mu = b.mass / (3 * primary.mass);
+                    if (mu > 0) {
+                        const hillRadius = a * Math.cbrt(mu);
+                        const ringPxOuter = hillRadius * p.scale;
+                        const ringPxInner = ringPxOuter * 0.5;
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.strokeStyle = "rgba(102,252,241,0.35)";
+                        ctx.lineWidth = 1;
+                        ctx.arc(p.x, p.y, ringPxInner, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+                        ctx.arc(p.x, p.y, ringPxOuter, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+            }
         }
     }
 
@@ -690,8 +910,187 @@ function loop() {
         ctx.fillText(dragTargetBody ? "FLING: " + dragTargetBody.name : "SPAWN & SHOOT", startPos.x + 10, startPos.y - 10);
     }
 
+    drawCurvatureHeatmap();
+    drawInstrumentFOV();
+
     frameCount++;
     requestAnimationFrame(loop);
+}
+
+function drawSpacetimeFabric() {
+    var gridSpacing = 110;
+    var warpBodies = bodies.filter(b => b.mass > 5 || b.type.indexOf("Black Hole") !== -1 || b.type === "Quasar");
+    if (selectedBody && warpBodies.indexOf(selectedBody) === -1) warpBodies.push(selectedBody);
+    if (warpBodies.length === 0) return;
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = REL_OVERLAY ? 1.0 : 0.9;
+    var cols = Math.floor(width / gridSpacing) + 4;
+    var rows = Math.floor(height / gridSpacing) + 4;
+    var c2 = 5000;
+    for (var j = -2; j < rows; j++) {
+        ctx.beginPath();
+        var first = true;
+        for (var i = -2; i < cols; i++) {
+            var sx = i * gridSpacing;
+            var sy = j * gridSpacing;
+            var warp = 0;
+            for (var k = 0; k < warpBodies.length; k++) {
+                var b = warpBodies[k];
+                var p = project(b.x, b.y, b.z);
+                var dx = sx - p.x;
+                var dy = sy - p.y;
+                var r = Math.sqrt(dx*dx + dy*dy + 1);
+                var rs = 2 * G * b.mass / c2;
+                var compact = rs / Math.max(r, rs + 1);
+                if (compact < 0) compact = 0;
+                var weight = 1;
+                if (b.type.indexOf("Black Hole") !== -1 || b.type === "Quasar") weight = 4;
+                else if (b.type === "Star" || b.name === "Sun") weight = 2;
+                var curve = compact * weight;
+                warp += curve * 650;
+            }
+            var wy = sy + warp;
+            var lineStrength = Math.min(Math.abs(warp) / 150, 1);
+            if (REL_OVERLAY) {
+                var rCol = Math.floor(100 + 155 * lineStrength);
+                var bCol = Math.floor(255 - 155 * lineStrength);
+                ctx.strokeStyle = "rgba(" + rCol + ", 200, " + bCol + ", 0.9)";
+            } else {
+                ctx.strokeStyle = "rgba(102, 252, 241, 0.35)";
+            }
+            if (first) {
+                ctx.moveTo(sx, wy);
+                first = false;
+            } else {
+                ctx.lineTo(sx, wy);
+            }
+        }
+        ctx.stroke();
+    }
+    for (var i2 = -2; i2 < cols; i2++) {
+        ctx.beginPath();
+        var first2 = true;
+        for (var j2 = -2; j2 < rows; j2++) {
+            var sx2 = i2 * gridSpacing;
+            var sy2 = j2 * gridSpacing;
+            var warp2 = 0;
+            for (var k2 = 0; k2 < warpBodies.length; k2++) {
+                var b2 = warpBodies[k2];
+                var p2 = project(b2.x, b2.y, b2.z);
+                var dx2 = sx2 - p2.x;
+                var dy2 = sy2 - p2.y;
+                var r2 = Math.sqrt(dx2*dx2 + dy2*dy2 + 1);
+                var rs2 = 2 * G * b2.mass / c2;
+                var compact2 = rs2 / Math.max(r2, rs2 + 1);
+                if (compact2 < 0) compact2 = 0;
+                var weight2 = 1;
+                if (b2.type.indexOf("Black Hole") !== -1 || b2.type === "Quasar") weight2 = 4;
+                else if (b2.type === "Star" || b2.name === "Sun") weight2 = 2;
+                var curve2 = compact2 * weight2;
+                warp2 += curve2 * 650;
+            }
+            var wy2 = sy2 + warp2;
+            var lineStrength2 = Math.min(Math.abs(warp2) / 150, 1);
+            if (REL_OVERLAY) {
+                var rCol2 = Math.floor(100 + 155 * lineStrength2);
+                var bCol2 = Math.floor(255 - 155 * lineStrength2);
+                ctx.strokeStyle = "rgba(" + rCol2 + ", 200, " + bCol2 + ", 0.9)";
+            } else {
+                ctx.strokeStyle = "rgba(102, 252, 241, 0.35)";
+            }
+            if (first2) {
+                ctx.moveTo(sx2, wy2);
+                first2 = false;
+            } else {
+                ctx.lineTo(sx2, wy2);
+            }
+        }
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawCurvatureHeatmap() {
+    if (!selectedBody) return;
+    const p = project(selectedBody.x, selectedBody.y, selectedBody.z);
+    if (p.depth < -500) return;
+    const c2Curve = 5000;
+    const rsCurve = 2 * G * selectedBody.mass / c2Curve;
+    const rSurfCurve = Math.max(selectedBody.radius, 1);
+    const compactCurve = rsCurve / Math.max(rSurfCurve, rsCurve + 1);
+    if (!(compactCurve > 0) || !isFinite(compactCurve)) return;
+    let weightCurve = 1;
+    if (selectedBody.type.indexOf("Black Hole") !== -1 || selectedBody.type === "Quasar") weightCurve = 4;
+    else if (selectedBody.type === "Star" || selectedBody.name === "Sun") weightCurve = 2;
+    const curveBase = compactCurve * weightCurve;
+    const radiusPixels = Math.min(300, Math.max(40, curveBase * 800));
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radiusPixels);
+    const heatStrength = Math.min(curveBase * 8, 1);
+    const innerColor = "rgba(" + Math.floor(150 + 105 * heatStrength) + ", " + Math.floor(100 + 100 * heatStrength) + ", 255, " + (0.35 + 0.25 * heatStrength) + ")";
+    const outerColor = "rgba(0, 0, 0, 0)";
+    grad.addColorStop(0, innerColor);
+    grad.addColorStop(1, outerColor);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radiusPixels, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawInstrumentFOV() {
+    if (!SHOW_FOV) return;
+    if (!selectedBody) return;
+    if (selectedBody.type !== "Spacecraft") return;
+    const p = project(selectedBody.x, selectedBody.y, selectedBody.z);
+    if (p.depth < -500) return;
+    const vx = selectedBody.vx;
+    const vy = selectedBody.vy;
+    const vmag = Math.sqrt(vx*vx + vy*vy) || 1;
+    const ux = vx / vmag;
+    const uy = vy / vmag;
+    const px = -uy;
+    const py = ux;
+    const specs = {
+        "JWST": { w: 42, h: 26, d: 28, c: "#66fcf1" },
+        "Hubble": { w: 32, h: 22, d: 22, c: "#a0c4ff" },
+        "Parker Solar Probe": { w: 60, h: 12, d: 35, c: "#ffcc00" },
+        "Voyager 1": { w: 24, h: 24, d: 18, c: "#ffffff" },
+        "Voyager 2": { w: 24, h: 24, d: 18, c: "#ffffff" },
+        "Cassini": { w: 28, h: 20, d: 20, c: "#ffe0b2" },
+        "Juno": { w: 28, h: 20, d: 20, c: "#a0d8ff" },
+        "Galileo": { w: 26, h: 18, d: 18, c: "#e0e0e0" },
+        "Huygens": { w: 22, h: 16, d: 16, c: "#ffd1a1" },
+        "ISS": { w: 20, h: 14, d: 14, c: "#bbbbbb" }
+    };
+    const sp = specs[selectedBody.name] || { w: 26, h: 18, d: 20, c: "#66fcf1" };
+    const cx = p.x + ux * sp.d;
+    const cy = p.y + uy * sp.d;
+    const hx = px * (sp.w / 2);
+    const hy = py * (sp.w / 2);
+    const vx2 = ux * (sp.h / 2);
+    const vy2 = uy * (sp.h / 2);
+    const corners = [
+        { x: cx - hx - vx2, y: cy - hy - vy2 },
+        { x: cx + hx - vx2, y: cy + hy - vy2 },
+        { x: cx + hx + vx2, y: cy + hy + vy2 },
+        { x: cx - hx + vx2, y: cy - hy + vy2 }
+    ];
+    ctx.save();
+    ctx.strokeStyle = sp.c;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = sp.c;
+    ctx.fill();
+    ctx.restore();
 }
 
 function adjustColor(color, amount) { return color; }
@@ -714,6 +1113,37 @@ var SOLAR_DATA = {
         { name: "Pluto", a: 1100, e: 0.24, i: 17, color: "#D1C4A8", mass: 0.8, r: 2.5, desc: "Kuiper belt dwarf." }
     ],
     comets: [ { name: "Halley", a: 600, e: 0.96, i: 162, color: "#FFF", mass: 0.01, r: 1.5, desc: "Famous comet." } ]
+};
+
+var SOLAR_MOONS = {
+    Earth: [
+        { name: "Moon", a: 25, e: 0.055, i: 5.1, color: "#cccccc", mass: 1.0, r: 2.0, desc: "Earth's Moon." }
+    ],
+    Mars: [
+        { name: "Phobos", a: 4, e: 0.015, i: 1.0, color: "#b08080", mass: 0.001, r: 0.8, desc: "Domed moon." },
+        { name: "Deimos", a: 10, e: 0.0002, i: 1.8, color: "#c09090", mass: 0.001, r: 0.6, desc: "Outer moon." }
+    ],
+    Jupiter: [
+        { name: "Io", a: 22, e: 0.004, i: 0.0, color: "#e0c090", mass: 0.5, r: 2.5, desc: "Volcanic." },
+        { name: "Europa", a: 28, e: 0.009, i: 0.5, color: "#cfd7e3", mass: 0.5, r: 2.2, desc: "Icy shell." },
+        { name: "Ganymede", a: 35, e: 0.001, i: 0.2, color: "#b0a080", mass: 0.8, r: 3.0, desc: "Largest moon." },
+        { name: "Callisto", a: 50, e: 0.007, i: 0.3, color: "#9c8c7a", mass: 0.7, r: 2.8, desc: "Cratered." }
+    ],
+    Saturn: [
+        { name: "Titan", a: 45, e: 0.029, i: 0.3, color: "#d0a060", mass: 0.7, r: 2.6, desc: "Thick atmosphere." },
+        { name: "Enceladus", a: 20, e: 0.004, i: 0.0, color: "#e6f2ff", mass: 0.2, r: 1.3, desc: "Geysers." },
+        { name: "Rhea", a: 35, e: 0.001, i: 0.3, color: "#cccccc", mass: 0.3, r: 2.0, desc: "Icy." }
+    ],
+    Uranus: [
+        { name: "Titania", a: 30, e: 0.001, i: 0.3, color: "#e0e0e0", mass: 0.3, r: 2.0, desc: "Largest of Uranus." },
+        { name: "Oberon", a: 40, e: 0.001, i: 0.1, color: "#d0d0d0", mass: 0.3, r: 1.9, desc: "Old surface." }
+    ],
+    Neptune: [
+        { name: "Triton", a: 25, e: 0.0, i: 157, color: "#ffccff", mass: 0.4, r: 2.2, desc: "Retrograde orbit." }
+    ],
+    Pluto: [
+        { name: "Charon", a: 8, e: 0.0, i: 0.0, color: "#a0a0a0", mass: 0.1, r: 1.5, desc: "Binary companion." }
+    ]
 };
 
 function getKeplerPos(body, date) {
@@ -740,6 +1170,32 @@ function getKeplerPos(body, date) {
     return { x, y, z, vx, vy, vz };
 }
 
+function getMoonState(moon, parent, date) {
+    const epoch = new Date("2000-01-01").getTime();
+    const tDays = (date.getTime() - epoch) / (1000 * 60 * 60 * 24);
+    const r = moon.a;
+    const vCirc = Math.sqrt(G * parent.mass / Math.max(r, 1));
+    const n = vCirc / Math.max(r, 1); // radians per day scale
+    let M = (n * tDays) % (2 * Math.PI);
+    let E = M;
+    for (let i = 0; i < 4; i++) { E = M + moon.e * Math.sin(E); }
+    const vTrue = 2 * Math.atan(Math.sqrt((1 + moon.e) / (1 - moon.e)) * Math.tan(E / 2));
+    const rNow = r * (1 - moon.e * Math.cos(E));
+    let x_orb = rNow * Math.cos(vTrue);
+    let y_orb = rNow * Math.sin(vTrue);
+    const incl = moon.i * (Math.PI / 180);
+    let xRel = x_orb;
+    let yRel = y_orb * Math.cos(incl);
+    let zRel = y_orb * Math.sin(incl);
+    const vxRel = -Math.sin(vTrue) * vCirc;
+    const vyRel = Math.cos(vTrue) * vCirc * Math.cos(incl);
+    const vzRel = Math.cos(vTrue) * vCirc * Math.sin(incl);
+    return {
+        x: parent.x + xRel, y: parent.y + yRel, z: parent.z + zRel,
+        vx: parent.vx + vxRel, vy: parent.vy + vyRel, vz: parent.vz + vzRel
+    };
+}
+
 function loadSolarSystemDate() {
     setTemplateUI('solar');
     const picker = document.getElementById('datePicker');
@@ -754,6 +1210,52 @@ function loadSolarSystemDate() {
         const state = getKeplerPos(data, currentDate);
         bodies.push(new Body(data.name, SOLAR_DATA.dwarfs.includes(data) ? "Dwarf Planet" : (SOLAR_DATA.comets.includes(data) ? "Comet" : "Planet"), data.mass, data.r, data.color, state.x, state.y, state.z, state.vx, state.vy, state.vz, data.desc));
     });
+
+    ["Earth","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto"].forEach(pname => {
+        const parent = bodies.find(b => b.name === pname);
+        const moons = SOLAR_MOONS[pname] || [];
+        if (parent && moons.length > 0) {
+            moons.forEach(m => {
+                const mstate = getMoonState(m, parent, currentDate);
+                bodies.push(new Body(m.name, "Moon", m.mass, m.r, m.color, mstate.x, mstate.y, mstate.z, mstate.vx, mstate.vy, mstate.vz, m.desc));
+            });
+        }
+    });
+
+    const sun = bodies.find(b => b.name === "Sun");
+    const earth = bodies.find(b => b.name === "Earth");
+    const jupiter = bodies.find(b => b.name === "Jupiter");
+    const saturn = bodies.find(b => b.name === "Saturn");
+
+    if (earth) {
+        const d = 10;
+        bodies.push(new Body("JWST", "Spacecraft", 0.01, 1.5, "#ffffff", earth.x + d, earth.y + d * 0.2, earth.z, earth.vx, earth.vy, earth.vz, "James Webb Space Telescope near Sun–Earth L2."));
+        bodies.push(new Body("ISS", "Spacecraft", 0.01, 1, "#bbbbbb", earth.x - d * 0.5, earth.y - d * 0.1, earth.z, earth.vx, earth.vy, earth.vz, "International Space Station in low Earth orbit."));
+        bodies.push(new Body("Hubble", "Spacecraft", 0.01, 1, "#a0c4ff", earth.x - d, earth.y + d * 0.15, earth.z, earth.vx, earth.vy, earth.vz, "Hubble Space Telescope in low Earth orbit."));
+    }
+
+    if (jupiter) {
+        const dJ = 18;
+        bodies.push(new Body("Juno", "Spacecraft", 0.01, 1.2, "#a0d8ff", jupiter.x + dJ, jupiter.y, jupiter.z, jupiter.vx, jupiter.vy, jupiter.vz, "Juno spacecraft studying Jupiter."));
+        bodies.push(new Body("Galileo", "Spacecraft", 0.01, 1.2, "#e0e0e0", jupiter.x - dJ, jupiter.y, jupiter.z, jupiter.vx, jupiter.vy, jupiter.vz, "Galileo probe legacy at Jupiter."));
+    }
+
+    if (saturn) {
+        const dS = 16;
+        bodies.push(new Body("Cassini", "Spacecraft", 0.01, 1.2, "#ffe0b2", saturn.x - dS, saturn.y, saturn.z, saturn.vx, saturn.vy, saturn.vz, "Cassini mission legacy around Saturn."));
+        bodies.push(new Body("Huygens", "Spacecraft", 0.01, 1.0, "#ffd1a1", saturn.x - dS * 0.6, saturn.y + 3, saturn.z, saturn.vx, saturn.vy, saturn.vz, "Huygens probe to Titan."));
+    }
+
+    if (sun) {
+        bodies.push(new Body("Voyager 1", "Spacecraft", 0.005, 1, "#66fcf1", sun.x + 1300, sun.y + 120, sun.z, 0.2, 0.05, 0, "Voyager 1 in the outer heliosphere."));
+        bodies.push(new Body("Voyager 2", "Spacecraft", 0.005, 1, "#66fcf1", sun.x - 1150, sun.y - 180, sun.z, -0.15, -0.04, 0, "Voyager 2 exploring the outer Solar System."));
+        bodies.push(new Body("Parker Solar Probe", "Spacecraft", 0.005, 1, "#ffcc00", sun.x + 60, sun.y, sun.z, 1.4, 0.3, 0, "Parker Solar Probe skimming the Sun."));
+    }
+
+    const pluto = bodies.find(b => b.name === "Pluto");
+    if (pluto) {
+        bodies.push(new Body("New Horizons", "Spacecraft", 0.005, 1, "#ffffff", pluto.x - 40, pluto.y + 10, pluto.z, pluto.vx + 0.3, pluto.vy + 0.1, pluto.vz, "New Horizons flyby of Pluto."));
+    }
 
     for(let i=0; i<40; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -777,6 +1279,7 @@ function buildNavMenu() {
     
     bodies.forEach(b => {
         if (b.type === "Asteroid") return; // Completely hide asteroids from menu
+        if (NAV_FILTER && b.name.toLowerCase().indexOf(NAV_FILTER) === -1) return;
         
         let typeName = b.type;
         // Fix pluralization
@@ -825,11 +1328,14 @@ function selectBody(b) {
     document.getElementById('targetType').innerText = b.type;
     document.getElementById('targetMass').innerText = b.mass.toFixed(2) + " M";
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('selected'));
+    const curveEl = document.getElementById('targetCurve');
+    if (curveEl) curveEl.innerText = "--";
 }
 
 function deselectBody() {
     selectedBody = null;
     cameraLocked = false;
+    CAMERA_MODE = 'free';
     document.getElementById('targetPanel').classList.add('hidden');
 }
 
@@ -849,7 +1355,7 @@ function updateUI() {
             label = "Dist Sun";
         }
         if (!refBody) {
-            refBody = {x:0, y:0, z:0}; // Center
+            refBody = {x:0, y:0, z:0};
             label = "Dist Core";
         }
         
@@ -857,6 +1363,109 @@ function updateUI() {
         
         document.getElementById('targetDist').innerText = (dist / 110).toFixed(2) + " AU"; 
         document.getElementById('distLabel').innerText = label + ":";
+
+        let hillText = "--";
+        let lagrangeText = "--";
+        let primary = null;
+        let minOrbDist = Infinity;
+        for (let b of bodies) {
+            if (b === selectedBody) continue;
+            if (b.mass <= selectedBody.mass) continue;
+            const dx = selectedBody.x - b.x;
+            const dy = selectedBody.y - b.y;
+            const dz = selectedBody.z - b.z;
+            const dOrb = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            if (dOrb < minOrbDist) {
+                minOrbDist = dOrb;
+                primary = b;
+            }
+        }
+        if (primary && minOrbDist > 0) {
+            const a = minOrbDist;
+            const mu = selectedBody.mass / (3 * primary.mass);
+            if (mu > 0) {
+                const hillRadius = a * Math.cbrt(mu);
+                const hillAu = hillRadius / 110;
+                hillText = hillAu.toFixed(3) + " AU";
+                const lDist = a * Math.cbrt(mu);
+                const lAu = lDist / 110;
+                lagrangeText = "±" + lAu.toFixed(3) + " AU";
+            }
+        }
+        document.getElementById('targetHill').innerText = hillText;
+        document.getElementById('targetLpoints').innerText = lagrangeText;
+
+        let timeDil = "1.00x";
+        if (selectedBody.type.includes("Black Hole") || selectedBody.type === "Quasar") {
+            const c2 = 20000;
+            const rs = 2 * G * selectedBody.mass / c2;
+            const rSurface = Math.max(selectedBody.radius, 1);
+            const factor = Math.max(0, 1 - rs / Math.max(rSurface, rs + 1));
+            const dil = Math.sqrt(factor);
+            if (isFinite(dil) && dil > 0) timeDil = dil.toFixed(3) + "x";
+        }
+        const timeEl = document.getElementById('targetTimeDil');
+        if (timeEl) timeEl.innerText = timeDil;
+
+        let curveText = "--";
+        const c2Curve = 5000;
+        const rsCurve = 2 * G * selectedBody.mass / c2Curve;
+        const rSurfCurve = Math.max(selectedBody.radius, 1);
+        const compactCurve = rsCurve / Math.max(rSurfCurve, rsCurve + 1);
+        let curveBase = 0;
+        if (compactCurve > 0 && isFinite(compactCurve)) {
+            let weightCurve = 1;
+            if (selectedBody.type.indexOf("Black Hole") !== -1 || selectedBody.type === "Quasar") weightCurve = 4;
+            else if (selectedBody.type === "Star" || selectedBody.name === "Sun") weightCurve = 2;
+            curveBase = compactCurve * weightCurve;
+            const curveScaled = curveBase * 100;
+            curveText = curveScaled.toFixed(2);
+        }
+        const curveEl = document.getElementById('targetCurve');
+        if (curveEl) curveEl.innerText = curveText;
+
+        const orbitBlock = document.getElementById('orbitRelBlock');
+        const orbitSlider = document.getElementById('orbitRadiusSlider');
+        const orbitRadiusLabel = document.getElementById('orbitRadiusLabel');
+        const orbitTimeEl = document.getElementById('orbitTimeDil');
+        const orbitCurveEl = document.getElementById('orbitCurve');
+        if (orbitBlock && orbitSlider && orbitRadiusLabel && orbitTimeEl && orbitCurveEl) {
+            if (selectedBody.type.indexOf("Black Hole") !== -1 || selectedBody.type === "Quasar") {
+                orbitBlock.classList.remove('hidden');
+                if (!orbitSliderInit) {
+                    orbitSlider.value = "5";
+                    orbitSliderInit = true;
+                    orbitSlider.oninput = function() {
+                        const mult = parseFloat(orbitSlider.value);
+                        orbitRadiusLabel.innerText = mult.toFixed(1) + " × R";
+                    };
+                }
+                const multNow = parseFloat(orbitSlider.value);
+                const rOrb = Math.max(selectedBody.radius * multNow, selectedBody.radius + 1);
+                orbitRadiusLabel.innerText = multNow.toFixed(1) + " × R";
+                const c2Orb = 20000;
+                const rsOrb = 2 * G * selectedBody.mass / c2Orb;
+                const factorOrb = Math.max(0, 1 - rsOrb / Math.max(rOrb, rsOrb + 1));
+                let dilOrbText = "1.00x";
+                if (factorOrb > 0) {
+                    const dilOrb = Math.sqrt(factorOrb);
+                    if (isFinite(dilOrb) && dilOrb > 0) dilOrbText = dilOrb.toFixed(3) + "x";
+                }
+                orbitTimeEl.innerText = dilOrbText;
+                const c2CurveOrb = 5000;
+                const rsCurveOrb = 2 * G * selectedBody.mass / c2CurveOrb;
+                const compactCurveOrb = rsCurveOrb / Math.max(rOrb, rsCurveOrb + 1);
+                let curveOrbText = "--";
+                if (compactCurveOrb > 0 && isFinite(compactCurveOrb)) {
+                    const curveOrbBase = compactCurveOrb * 4;
+                    const curveOrbScaled = curveOrbBase * 100;
+                    curveOrbText = curveOrbScaled.toFixed(2);
+                }
+                orbitCurveEl.innerText = curveOrbText;
+            } else {
+                orbitBlock.classList.add('hidden');
+            }
+        }
     }
 }
 
@@ -889,73 +1498,9 @@ function setTemplateUI(templateName) {
     }
 }
 
-async function callGemini(prompt, systemInstruction) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-    const payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] } };
-    try {
-        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-        const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (error) { console.error("Gemini API Error:", error); return null; }
-}
-
-async function generateScenario() {
-    const userPrompt = document.getElementById('aiPrompt').value;
-    if (!userPrompt) return;
-    const btn = document.getElementById('btnGenerate');
-    btn.innerHTML = `BUILDING...`;
-    btn.disabled = true;
-    const systemPrompt = `
-    You are a Cosmic God-Engine and Astrophysics Architect.
-    Generate a JSON array of celestial bodies for a physics simulation.
-    
-    RULES:
-    1. REALISM: Unless requested otherwise, create stable, realistic systems (Binary Stars, Planetary Systems).
-    2. NAMING: Use scientific names (e.g., Kepler-186f, Alpha Centauri) or mythological names.
-    3. TYPES: Use "Star", "Planet", "Black Hole", "Quasar", "Asteroid", "Gas Giant" explicitly.
-    4. COLORS: Use realistic hex codes. 
-       - Stars: O-Class (#9db4ff), G-Class (#fff4ea), M-Class (#ffcc6f).
-       - Planets: Rocky (#8b7d71), Ice (#a3c3d9), Gas (#e3bb76).
-    5. PHYSICS: 
-       - Calculate orbital velocities for stability: v = sqrt(GM/r).
-       - Use 3D coordinates (inclination).
-    
-    Body Structure:
-    {
-      "name": string,
-      "type": string,
-      "mass": float (0.1 to 50000),
-      "radius": float,
-      "x": float, "y": float, "z": float (range -2000 to 2000),
-      "vx": float, "vy": float, "vz": float (range -20 to 20),
-      "color": hex string,
-      "desc": string
-    }
-
-    SCENARIO GUIDELINES:
-    - GALAXY COLLISION: Two clusters of stars with supermassive black holes crashing.
-    - BIG BANG: Dense central point exploding outward radially.
-    - SYSTEM: A central star with planets in stable circular orbits.
-    
-    Output JSON ONLY. No markdown.
-    `;
-    const result = await callGemini(userPrompt, systemPrompt);
-    if (result) {
-        try {
-            const jsonStr = result.replace(/```json|```/g, '').trim();
-            const newBodiesData = JSON.parse(jsonStr);
-            clearSim();
-            setTemplateUI('chaos'); 
-            newBodiesData.forEach(b => {
-                bodies.push(new Body(b.name, b.type, b.mass, b.radius || Math.sqrt(b.mass), b.color, b.x, b.y, b.z, b.vx, b.vy, b.vz, b.desc));
-            });
-            buildNavMenu();
-            resetCam();
-        } catch (e) { alert("Architect Error: Invalid Data Structure"); }
-    }
-    btn.innerHTML = `GO`;
-    btn.disabled = false;
+function openJWSTLive() {
+    var url = "https://spacetelescopelive.org/webb";
+    window.open(url, "_blank");
 }
 
 canvas.addEventListener('mousedown', e => {
@@ -1069,6 +1614,7 @@ function resetCam() {
     camera.x = 0; camera.y = 0; camera.z = 0;
     camera.targetYaw = 0; camera.targetPitch = 0;
     cameraLocked = false;
+    CAMERA_MODE = 'free';
 }
 
 function clearSim() {
@@ -1146,13 +1692,218 @@ function templateChaos() {
     buildNavMenu();
 }
 
+function templateM87Jet() {
+    setTemplateUI('blackhole');
+    clearSim();
+    camera.targetZoom = 0.8;
+    camera.targetPitch = 1.0;
+    bodies.push(new Body("M87*", "Black Hole", 8000, 18, "#000000", 0, 0, 0, 0, 0, 0, "Inspired by the jet of M87* imaged in radio and infrared."));
+    for (let i = 0; i < 250; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 40 + Math.random() * 140;
+        const vel = Math.sqrt(G * 8000 / dist);
+        const z = (Math.random() - 0.5) * 10;
+        const col = Math.random() > 0.5 ? "#cad7ff" : "#fff4ea";
+        bodies.push(new Body("Jet Star", "Star", Math.random() * 2, 1, col, Math.cos(angle) * dist, Math.sin(angle) * dist, z, -Math.sin(angle) * vel, Math.cos(angle) * vel, 0, "Stellar material around the jet of M87*."));
+    }
+    bodies.push(new Body("Jet Beam", "Quasar", 1000, 10, "#000000", 0, -120, 0, 0, -1.5, 0, "Outflow beam representing the relativistic jet of M87*."));
+    buildNavMenu();
+}
+
+function templateRunawayBH() {
+    setTemplateUI('blackhole');
+    clearSim();
+    camera.targetZoom = 0.6;
+    camera.targetPitch = 0.9;
+    const host = new Body("Host Galaxy Core", "Black Hole", 6000, 16, "#000000", -200, 0, 0, 0, 0, 0, "Galaxy core left behind as a runaway black hole escapes.");
+    bodies.push(host);
+    const runaway = new Body("Runaway SMBH", "Black Hole", 4000, 14, "#000000", 0, 0, 0, 1.2, 0.2, 0, "Inspired by a runaway supermassive black hole dragging stars behind it.");
+    bodies.push(runaway);
+    for (let i = 0; i < 180; i++) {
+        const t = i / 180;
+        const trailX = -50 + t * 600;
+        const trailY = (Math.random() - 0.5) * 60;
+        const trailZ = (Math.random() - 0.5) * 40;
+        const col = "#fff4ea";
+        const star = new Body("Trail Star", "Star", 1.5, 1, col, trailX, trailY, trailZ, 0.6 + t * 0.6, 0.1 * (Math.random() - 0.5), 0, "Stellar wake along a runaway black hole path.");
+        bodies.push(star);
+    }
+    buildNavMenu();
+}
+
+function setCameraMode(mode) {
+    CAMERA_MODE = mode;
+    const freeBtn = document.getElementById('camFree');
+    const followBtn = document.getElementById('camFollow');
+    const chaseBtn = document.getElementById('camChase');
+    const godBtn = document.getElementById('camGod');
+    if (freeBtn && followBtn && chaseBtn && godBtn) {
+        freeBtn.classList.toggle('active-mode', mode === 'free');
+        followBtn.classList.toggle('active-mode', mode === 'follow');
+        chaseBtn.classList.toggle('active-mode', mode === 'chase');
+        godBtn.classList.toggle('active-mode', mode === 'god');
+        freeBtn.classList.toggle('opacity-50', mode !== 'free');
+        followBtn.classList.toggle('opacity-50', mode !== 'follow');
+        chaseBtn.classList.toggle('opacity-50', mode !== 'chase');
+        godBtn.classList.toggle('opacity-50', mode !== 'god');
+    }
+}
+
+function toggleRelativityOverlay() {
+    REL_OVERLAY = !REL_OVERLAY;
+    const btn = document.getElementById('btnRelOverlay');
+    if (btn) {
+        btn.classList.toggle('active-mode', REL_OVERLAY);
+        btn.classList.toggle('opacity-50', !REL_OVERLAY);
+    }
+}
+
+function toggleHelp() {
+    const m = document.getElementById('helpModal');
+    if (!m) return;
+    const hidden = m.classList.contains('hidden');
+    m.classList.toggle('hidden', !hidden);
+    m.classList.toggle('flex', hidden);
+}
+
+function takeSnapshot() {
+    const snapCanvas = document.createElement('canvas');
+    snapCanvas.width = canvas.width;
+    snapCanvas.height = canvas.height;
+    const sctx = snapCanvas.getContext('2d');
+    sctx.drawImage(canvas, 0, 0);
+    const sysLabel = CURRENT_TEMPLATE.toUpperCase();
+    const dateText = document.getElementById('simDateDisplay') ? document.getElementById('simDateDisplay').innerText : "";
+    const selName = selectedBody ? selectedBody.name : "None";
+    const timeDilText = document.getElementById('targetTimeDil') ? document.getElementById('targetTimeDil').innerText : "";
+    const curveText = document.getElementById('targetCurve') ? document.getElementById('targetCurve').innerText : "";
+    sctx.fillStyle = "rgba(0,0,0,0.65)";
+    sctx.fillRect(10, snapCanvas.height - 80, 320, 70);
+    sctx.fillStyle = "#66fcf1";
+    sctx.font = "12px monospace";
+    sctx.fillText("Gravitational Dynamics Simulator", 20, snapCanvas.height - 60);
+    sctx.fillStyle = "#ffffff";
+    sctx.fillText("Scenario: " + sysLabel + "  Date: " + dateText, 20, snapCanvas.height - 45);
+    sctx.fillText("Selected: " + selName, 20, snapCanvas.height - 30);
+    sctx.fillText("Time Dil.: " + timeDilText + "  Curvature: " + curveText, 20, snapCanvas.height - 15);
+    const link = document.createElement('a');
+    link.href = snapCanvas.toDataURL("image/png");
+    const now = new Date();
+    const ts = now.getFullYear().toString() + (now.getMonth()+1).toString().padStart(2,'0') + now.getDate().toString().padStart(2,'0') + "_" + now.getHours().toString().padStart(2,'0') + now.getMinutes().toString().padStart(2,'0') + now.getSeconds().toString().padStart(2,'0');
+    link.download = "gravsim_snapshot_" + ts + ".png";
+    link.click();
+}
+
 document.getElementById('timeSlider').addEventListener('input', e => SIM_SPEED = parseFloat(e.target.value));
 document.getElementById('checkTrails').addEventListener('change', e => SHOW_TRAILS = e.target.checked);
 document.getElementById('checkCollisions').addEventListener('change', e => ENABLE_MERGING = e.target.checked);
+document.getElementById('navSearch').addEventListener('input', e => { NAV_FILTER = e.target.value.trim().toLowerCase(); buildNavMenu(); });
+document.getElementById('checkFOV').addEventListener('change', e => SHOW_FOV = e.target.checked);
+
+function exportState() {
+    const bods = bodies.map(b => ({
+        id: b.id,
+        name: b.name, type: b.type, mass: b.mass, radius: b.radius, color: b.color, desc: b.desc,
+        x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, pulse: b.pulse
+    }));
+    const state = {
+        bodies: bods,
+        currentDate: currentDate.toISOString(),
+        camera: { x: camera.x, y: camera.y, z: camera.z, zoom: camera.zoom, yaw: camera.yaw, pitch: camera.pitch, targetZoom: camera.targetZoom, targetYaw: camera.targetYaw, targetPitch: camera.targetPitch },
+        settings: { SIM_SPEED, SHOW_TRAILS, ENABLE_MERGING, REL_OVERLAY, CAMERA_MODE, CURRENT_TEMPLATE }
+    };
+    return state;
+}
+
+function importState(state) {
+    if (!state || !state.bodies) return false;
+    clearSim();
+    bodies = [];
+    state.bodies.forEach(sb => {
+        const nb = new Body(sb.name, sb.type, sb.mass, sb.radius, sb.color, sb.x, sb.y, sb.z, sb.vx, sb.vy, sb.vz, sb.desc);
+        nb.id = sb.id;
+        nb.pulse = sb.pulse || 0;
+        bodies.push(nb);
+    });
+    try { currentDate = new Date(state.currentDate); } catch (_) {}
+    if (state.camera) {
+        camera.x = state.camera.x; camera.y = state.camera.y; camera.z = state.camera.z;
+        camera.zoom = state.camera.zoom; camera.yaw = state.camera.yaw; camera.pitch = state.camera.pitch;
+        camera.targetZoom = state.camera.targetZoom; camera.targetYaw = state.camera.targetYaw; camera.targetPitch = state.camera.targetPitch;
+    }
+    if (state.settings) {
+        SIM_SPEED = state.settings.SIM_SPEED;
+        SHOW_TRAILS = state.settings.SHOW_TRAILS;
+        ENABLE_MERGING = state.settings.ENABLE_MERGING;
+        REL_OVERLAY = state.settings.REL_OVERLAY;
+        setCameraMode(state.settings.CAMERA_MODE || 'free');
+        CURRENT_TEMPLATE = state.settings.CURRENT_TEMPLATE || CURRENT_TEMPLATE;
+        const relBtn = document.getElementById('btnRelOverlay');
+        if (relBtn) {
+            relBtn.classList.toggle('active-mode', REL_OVERLAY);
+            relBtn.classList.toggle('opacity-50', !REL_OVERLAY);
+        }
+        const timeSlider = document.getElementById('timeSlider');
+        if (timeSlider) timeSlider.value = SIM_SPEED.toString();
+        const trailsCb = document.getElementById('checkTrails');
+        if (trailsCb) trailsCb.checked = !!SHOW_TRAILS;
+        const mergeCb = document.getElementById('checkCollisions');
+        if (mergeCb) mergeCb.checked = !!ENABLE_MERGING;
+    }
+    buildNavMenu();
+    resetCam();
+    return true;
+}
+
+function saveSession() {
+    const state = exportState();
+    try {
+        localStorage.setItem('gravsim_state', JSON.stringify(state));
+    } catch (_) {}
+}
+
+function loadSession() {
+    try {
+        const saved = localStorage.getItem('gravsim_state');
+        if (saved) importState(JSON.parse(saved));
+    } catch (_) {}
+}
+
+function setupAutoloadUI() {
+    const check = document.getElementById('checkAutoload');
+    if (!check) return;
+    const flag = localStorage.getItem('gravsim_autoload') === 'true';
+    check.checked = flag;
+    check.addEventListener('change', () => {
+        localStorage.setItem('gravsim_autoload', check.checked ? 'true' : 'false');
+    });
+}
 
 resize();
-templateSolar();
+setupAutoloadUI();
+const autoload = localStorage.getItem('gravsim_autoload') === 'true';
+const saved = localStorage.getItem('gravsim_state');
+if (autoload && saved) {
+    try {
+        const ok = importState(JSON.parse(saved));
+        if (!ok) templateSolar();
+    } catch (_) { templateSolar(); }
+} else {
+    templateSolar();
+}
 loop();
+
+if (AUTOSAVE_TIMER) clearInterval(AUTOSAVE_TIMER);
+AUTOSAVE_TIMER = setInterval(() => {
+    if (localStorage.getItem('gravsim_autoload') === 'true') {
+        saveSession();
+    }
+}, 30000);
+window.addEventListener('beforeunload', () => {
+    if (localStorage.getItem('gravsim_autoload') === 'true') {
+        saveSession();
+    }
+});
 
 </script>
 </body>
